@@ -5,3 +5,4 @@ instance/
 .env
 .venv/
 .pytest_cache/
+ACCES_LOCAL.txt

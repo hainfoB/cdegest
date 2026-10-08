@@ -86,6 +86,29 @@ def register_cli(app):
         n = seed_base(demo=app.config["DEMO_MODE"])
         click.echo(f"seed-base: {n} élément(s) créé(s)")
 
+    @app.cli.command("init-local")
+    def init_local_cmd():
+        """Create .env with a secret key and one private password per account (local use)."""
+        from pathlib import Path
+        env = Path(app.root_path).parent / ".env"
+        if env.exists():
+            click.echo(".env existe déjà : rien à faire")
+            return
+        words = ["Atlas", "Sahara", "Tassili", "Hoggar", "Djurdjura", "Babor", "Aures", "Medjerda"]
+        lines = ["FLASK_APP=wsgi", "DEMO_MODE=1", "SHOW_DEMO_ACCOUNTS=0", f"SECRET_KEY={secrets.token_hex(32)}"]
+        table = []
+        for spec in DEMO_USERS:
+            if "pwd_env" not in spec:
+                continue
+            pwd = f"{secrets.choice(words)}-{secrets.randbelow(9000) + 1000}-{secrets.token_urlsafe(4)}"
+            lines.append(f"{spec['pwd_env']}={pwd}")
+            table.append(f"{spec['name']:<34} {spec['email']:<32} {pwd}")
+        env.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        acces = Path(app.root_path).parent / "ACCES_LOCAL.txt"
+        acces.write_text("CDEgest — accès locaux (fichier privé, ne pas partager)\nhttp://localhost:5000/login\n\n" + "\n".join(table) + "\n", encoding="utf-8")
+        click.echo("Accès créés et enregistrés dans ACCES_LOCAL.txt :")
+        click.echo("\n".join(table))
+
     @app.cli.command("set-password")
     @click.argument("email")
     @click.password_option()
