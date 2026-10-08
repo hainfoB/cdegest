@@ -1,0 +1,5 @@
+<nav class="langsw" aria-label="{{ t('lang') }}">
+  {% for code, label in [('ar','ع'),('fr','FR'),('en','EN')] %}
+  <a href="{{ url_for('main.set_lang', code=code) }}" class="{{ 'on' if lang == code }}" lang="{{ code }}" {% if lang == code %}aria-current="true"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>

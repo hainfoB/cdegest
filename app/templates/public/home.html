@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.home') }}{% endblock %}
+{% block body %}
+<div class="topstrip"><div class="wrap">
+  <div class="contacts">
+    <span>{{ icon('mail', 16) }}{{ config.CONTACT_EMAIL }}</span>
+    <span>{{ icon('phone', 16) }}{{ config.CONTACT_PHONE }}</span>
+  </div>
+  {% include "partials/langsw.html" %}
+</div></div>
+
+<header class="pubhead"><div class="wrap">
+  <a class="logo" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE — {{ t('brand.tagline') }}"></a>
+  <nav class="pubnav" aria-label="{{ t('menu') }}">
+    <a class="on" href="{{ url_for('main.home') }}">{{ t('nav.home') }}</a>
+    <a href="#">{{ t('nav.about') }}</a>
+    <a href="#">{{ t('nav.missions') }}</a>
+    <a href="#">{{ t('nav.program') }}</a>
+    <a href="#">{{ t('nav.faq') }}</a>
+    <a href="#">{{ t('nav.contact') }}</a>
+  </nav>
+  <a class="btn btn-cde" href="{{ url_for('auth.login') }}">{{ t('cta.login') }}</a>
+</div></header>
+
+<main id="main">
+  <section class="hero">
+    <div class="hex"></div>
+    {% include "partials/net.html" %}
+    <div class="wrap"><div class="hero-txt">
+      <h1>{{ t('home.title') }}</h1>
+      <h2>{{ t('home.subtitle') }}</h2>
+      <p>{{ t('home.lead') }}</p>
+      <div class="ctas"><a class="btn btn-cde" href="#">{{ t('cta.register') }}</a><a class="btn btn-ghost" href="{{ url_for('auth.login') }}">{{ t('cta.login') }}</a></div>
+    </div></div>
+  </section>
+
+  <section class="features"><div class="wrap"><div class="grid">
+    <article class="fcard">{{ icon('presentation', 40) }}<h3>{{ t('home.card1.t') }}</h3><p>{{ t('home.card1.d') }}</p></article>
+    <article class="fcard">{{ icon('qr', 40) }}<h3>{{ t('home.card2.t') }}</h3><p>{{ t('home.card2.d') }}</p></article>
+    <article class="fcard">{{ icon('award', 40) }}<h3>{{ t('home.card3.t') }}</h3><p>{{ t('home.card3.d') }}</p></article>
+    <article class="fcard hl"><h3>{{ t('home.highlight.t') }}</h3><p>{{ t('home.highlight.d') }}</p></article>
+  </div></div></section>
+</main>
+
+<footer class="pubfoot"><div class="wrap"><span>© {{ today.year }} CDE · {{ t('footer.rights') }}</span><span>CDEgest</span></div></footer>
+{% endblock %}

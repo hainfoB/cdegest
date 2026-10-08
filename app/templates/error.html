@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ code }}{% endblock %}
+{% block body %}
+<main class="errpage" id="main"><div>
+  <b>{{ code }}</b>
+  <h1>{{ t('err.%s.t' % code) }}</h1>
+  <p>{{ t('err.%s.d' % code) }}</p>
+  <a class="btn btn-cde" href="{{ url_for('main.home') }}">{{ t('err.back') }}</a>
+</div></main>
+{% endblock %}

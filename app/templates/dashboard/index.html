@@ -1,0 +1,66 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.dashboard') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{{ t('dash.hello', name=current_user.name) }}</h1>
+    <p>{{ t({'national':'dash.national','wilaya':'dash.wilaya','institute':'dash.institute','teacher':'dash.teacher'}[view]) }}</p>
+  </div>
+  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=quarter) }}</span>
+</div>
+
+{% if view != 'teacher' %}
+<div class="scopecards">
+  {% if view == 'national' %}
+  <div class="sc"><span class="ib">{{ icon('globe', 22) }}</span><div><b>{{ n_wilayas }}</b><span>{{ t('dash.scope.wilayas') }}</span></div></div>
+  {% endif %}
+  {% if view != 'institute' %}
+  <div class="sc"><span class="ib">{{ icon('building', 22) }}</span><div><b>{{ institutes|length }}</b><span>{{ t('dash.scope.institutes') }}</span></div></div>
+  {% endif %}
+  <div class="sc"><span class="ib">{{ icon('users', 22) }}</span><div><b>{{ accounts }}</b><span>{{ t('dash.scope.accounts') }}</span></div></div>
+  {% if view == 'institute' %}
+  <div class="sc"><span class="ib">{{ icon('layers', 22) }}</span><div><b>0</b><span>{{ t('nav.sessions') }}</span></div></div>
+  {% endif %}
+  {% if view != 'national' %}
+  <div class="sc"><span class="ib">{{ icon('target', 22) }}</span><div><b>{{ t('kpi.none') }}</b><span>{{ t('nav.objectives') }}</span></div></div>
+  {% endif %}
+  <div class="sc next"><small>{{ t('dash.next.title') }}</small>
+    <p>{{ t({'national':'dash.next.mfep','wilaya':'dash.next.wilaya','institute':'dash.next.resp'}[view]) }}</p></div>
+</div>
+{% endif %}
+
+<div class="empty-note">{{ icon('info', 18) }}<span>{{ t('dash.empty') }}</span></div>
+
+{% if view == 'teacher' %}
+  <div class="panel" style="margin-bottom:28px"><h2>{{ t('teacher.modules') }}</h2>
+    <div class="emptybox">{{ icon('book', 48) }}<p>{{ t('teacher.empty') }}</p></div></div>
+  {% set fams = families[:2] %}
+{% else %}
+  {% set fams = families %}
+{% endif %}
+
+{% for fam, keys in fams %}
+<section class="fam" aria-labelledby="fam-{{ fam }}">
+  <h2 id="fam-{{ fam }}">{{ t('kpi.family.' ~ fam) }}</h2>
+  <div class="kpis">
+    {% for k in keys %}
+    <div class="kpi">
+      <div class="top"><span class="lbl">{{ t('kpi.' ~ k) }}</span>{{ icon(icons[k], 20) }}</div>
+      <div class="val">{{ t('kpi.none') }}</div>
+      {% if view != 'teacher' %}<div class="tg">{{ t('kpi.target') }} : {{ t('kpi.none') }}</div><div class="bar"></div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+{% if view == 'national' %}
+<div class="panel"><h2>{{ t('dash.scope.wilayas') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.wilaya') }}</th><th>{{ t('dash.scope.institutes') }}</th><th>{{ t('dash.table.groups') }}</th><th>{{ t('dash.table.trained') }}</th><th>{{ t('dash.table.attendance') }}</th></tr></thead>
+<tbody>{% for w in wilayas %}<tr><td class="code">{{ w.code }}</td><td><b>{{ w.name(lang) }}</b>{% if w.is_demo %}<span class="tag">DEMO</span>{% endif %}</td><td class="num">{{ w.institutes|length }}</td><td class="num">0</td><td class="num">0</td><td class="num">—</td></tr>{% endfor %}</tbody></table></div>
+{% elif view == 'wilaya' %}
+<div class="panel"><h2>{{ t('dash.scope.institutes') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('dash.table.groups') }}</th><th>{{ t('dash.table.trained') }}</th><th>{{ t('dash.table.attendance') }}</th></tr></thead>
+<tbody>{% for i in institutes %}<tr><td class="code">{{ i.code }}</td><td><b>{{ i.name(lang) }}</b></td><td class="num">0</td><td class="num">0</td><td class="num">—</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}

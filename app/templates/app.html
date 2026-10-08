@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% block body %}
+{% if config.DEMO_MODE %}<div class="demo-banner"><b>DEMO</b> · {{ t('demo.banner') }}</div>{% endif %}
+<header class="apphead"><div class="bar">
+  <button class="iconbtn menu-btn" type="button" aria-label="{{ t('menu') }}" aria-controls="side" aria-expanded="false" id="menuBtn">{{ icon('menu', 18) }}</button>
+  <a class="logo" href="{{ url_for('main.dashboard') }}"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE"></a>
+  <div class="app-title"><b>CDEgest</b><span>{{ scope_label }}</span></div>
+  <div class="head-sp"></div>
+  {% include "partials/langsw.html" %}
+  <div class="userchip">
+    <div class="who"><b>{{ current_user.name }}</b><small>{{ t('role.' ~ current_user.role) }}</small></div>
+    <span class="av" aria-hidden="true">{{ current_user.name[:1] }}</span>
+  </div>
+  <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="iconbtn" type="submit" title="{{ t('logout') }}" aria-label="{{ t('logout') }}">{{ icon('logout', 18) }}</button></form>
+</div></header>
+
+<div class="shell">
+  <nav class="side" id="side" aria-label="{{ t('menu') }}">
+    {% for endpoint, ic, key, roles, step in nav %}
+      {% if loop.index == 2 %}<div class="sep"></div>{% endif %}
+      {% if endpoint %}
+        <a href="{{ url_for(endpoint) }}" class="{{ 'on' if request.endpoint == endpoint }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ icon(ic) }}{{ t(key) }}</a>
+      {% else %}
+        <span class="soon" aria-disabled="true">{{ icon(ic) }}{{ t(key) }}<em>{{ t('nav.soon', n=step) }}</em></span>
+      {% endif %}
+    {% endfor %}
+  </nav>
+  <main class="main" id="main">{% block content %}{% endblock %}</main>
+</div>
+<script>
+(()=>{const b=document.getElementById('menuBtn'),s=document.getElementById('side');if(!b)return;
+b.addEventListener('click',()=>{const o=s.classList.toggle('open');b.setAttribute('aria-expanded',o)});})();
+</script>
+{% endblock %}
