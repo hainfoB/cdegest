@@ -17,15 +17,19 @@ Dossier d'architecture : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 | 7 | Données de démonstration complètes, déploiement Railway | à venir |
 | 8 | Recette | à venir |
 
-## Lancer en local
-```bash
-pip install -r requirements.txt
-export FLASK_APP=wsgi
-flask db upgrade        # crée la base (SQLite par défaut)
-flask seed-base         # wilayas, instituts, comptes de démonstration
-flask run               # http://localhost:5000
-pytest -q               # tests (dont le cloisonnement par rôle)
-```
+## Lancer en local (gratuit)
+**Windows** : installer [Python 3.11+](https://www.python.org/downloads/) (cocher *Add Python to PATH*), télécharger le dépôt, puis double-cliquer sur **`demarrer-windows.bat`**.
+**Linux / macOS** : `./demarrer.sh`
+
+Au premier lancement, le script installe tout, crée la base locale (SQLite), génère un mot de passe privé par compte dans **`ACCES_LOCAL.txt`** (jamais envoyé sur GitHub) et ouvre http://localhost:5000.
+
+Tests : `pytest -q`
+
+## Mettre en ligne gratuitement (Render + Neon)
+1. **Neon** (neon.com) : créer un projet PostgreSQL gratuit, copier l'URL de connexion (`postgresql://…`).
+2. **Render** (render.com) : *New → Blueprint*, choisir le dépôt `hainfoB/cdegest` ; le fichier `render.yaml` crée le service.
+3. Dans Render, renseigner `DATABASE_URL` (l'URL Neon) et les `PASSWORD_*`.
+4. Limites de l'offre gratuite : le service s'endort après 15 min sans visite (≈ 1 min au réveil) ; la base Neon gratuite n'expire pas (1 Go).
 
 ## Comptes d'accès
 Les comptes ne sont **jamais affichés** sur la page de connexion. Chaque mot de passe vient d'une variable d'environnement Railway ; à défaut, un secret aléatoire est généré (réinitialisable par `flask set-password <email>`).
