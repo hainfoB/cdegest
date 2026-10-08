@@ -19,7 +19,7 @@
 <div class="shell">
   <nav class="side" id="side" aria-label="{{ t('menu') }}">
     {% for endpoint, ic, key, roles, step in nav %}
-      {% if loop.index == 2 %}<div class="sep"></div>{% endif %}
+      {% if not endpoint and loop.previtem and loop.previtem[0] %}<div class="sep"></div>{% endif %}
       {% if endpoint %}
         <a href="{{ url_for(endpoint) }}" class="{{ 'on' if request.endpoint == endpoint }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ icon(ic) }}{{ t(key) }}</a>
       {% else %}

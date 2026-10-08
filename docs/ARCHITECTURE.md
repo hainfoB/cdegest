@@ -1,7 +1,7 @@
 # CDEgest — Dossier d'architecture (Étape 1)
 
 > Plateforme de gestion du réseau des Centres de développement de l'entrepreneuriat (CDE) : de l'institut (INSFP) à la wilaya (DFEP), jusqu'au ministère (MFEP).
-> Version 1.3 — 8 octobre 2026 — à valider avant l'étape 2.
+> Version 1.4 — 8 octobre 2026 — à valider avant l'étape 2.
 
 ---
 
@@ -13,7 +13,9 @@
 | Paiements / caisse | **Supprimés** : toutes les activités CDE sont gratuites |
 | Notifications | WhatsApp (liens `wa.me` pré-remplis, partout) + e-mail (Brevo, activé si la clé est fournie) |
 | Langues | Arabe (RTL, langue par défaut), français, anglais |
-| Démo | Bordj Bou Arréridj (données réalistes) + 2 wilayas de comparaison (Sétif, M'Sila) avec **données fictives** clairement signalées |
+| Territoire | **69 wilayas** (codes 59 à 69 : décret présidentiel n° 26-206 du 25 mai 2026), toutes chargées en base |
+| Démo | Bordj Bou Arréridj (wilaya pilote) + Sétif et M'Sila avec **données fictives** clairement signalées |
+| Période | **Année professionnelle** de septembre à août (mois de début paramétrable), découpée en 4 trimestres : T1 sept.–nov., T2 déc.–févr., T3 mars–mai, T4 juin–août |
 | Hébergement | Railway (service web + PostgreSQL), dépôt `hainfoB/cdegest` |
 | Mission | **Le CDE forme.** L'accompagnement des porteurs de projet relève de la NESDA : CDEgest ne le gère pas, il **enregistre seulement le résultat** (dossier accepté, projet abouti) communiqué par la NESDA, pour mesurer la conversion |
 | Satisfaction | Questionnaire de fin de session, anonyme, depuis le ticket du participant |
@@ -40,7 +42,7 @@ MFEP (national)
 | `dfep` | DFEP de wilaya | Sa wilaya (mêmes droits que le coordinateur, plus la validation) | `dfep.bba@cdegest.dz` |
 | `coord` | Coordinateur CDE de wilaya | Sa wilaya | `coord.bba@cdegest.dz` |
 | `resp` | Responsable CDE de l'institut | Son institut | `resp.insfp-bba01@cdegest.dz` |
-| `formateur` | Enseignant intervenant | Les modules qu'il supervise et les créneaux qu'il anime | `formateur.bba01@cdegest.dz` |
+| `formateur` | Enseignant intervenant | Les modules qu'il supervise et les créneaux qu'il anime ; **fait l'appel** dans ses séances | `formateur.bba01@cdegest.dz` |
 
 Les participants n'ont pas de compte : ils s'inscrivent par lien public et reçoivent un **ticket personnel** (lien secret + QR) qui donne accès à leurs présences et à leur attestation.
 
@@ -55,7 +57,8 @@ Légende : **G** = gère (créer/modifier) · **V** = valide · **L** = lit (nom
 | Objet | MFEP | DFEP | Coord. | Resp. CDE | Formateur |
 |---|---|---|---|---|---|
 | Référentiel national (catalogue de formations, indicateurs, modèle d'attestation) | G | L | L | L | L |
-| Objectifs annuels par wilaya | G | L (sa wilaya) | L | L (son institut) | — |
+| Objectifs annuels par wilaya et par CDE (saisis à l'ouverture de l'année professionnelle) | G | L + répartit entre ses CDE | L | L (son CDE) | — |
+| Comparaison de wilayas (jusqu'à 5, tous les KPI) | G | — | — | — | — |
 | Programme annuel de wilaya | A | G + **V** | G | L | — |
 | Instituts et comptes de la wilaya | — | G (resp., formateurs) | G (resp., formateurs) | G (formateurs de l'institut) | — |
 | Pool de formateurs mutualisés | — | G | G | L, demande | — |
@@ -63,13 +66,13 @@ Légende : **G** = gère (créer/modifier) · **V** = valide · **L** = lit (nom
 | Modules (contenu, supervision) | A | L | L | G (affecte les superviseurs) | G (contenu et suivi des modules qu'il supervise) |
 | Événements de wilaya | A | G | G | L | L (s'il intervient) |
 | Inscriptions et participants | — | L | L | G | L (groupes de ses modules) |
-| Présence | A | L | L | G (correction) | G (pointage de ses créneaux, lecture sur ses modules) |
+| Présence | A | L | L | G (correction) | **G : fait l'appel** de ses créneaux, lecture sur ses modules |
 | Attestations | A | L | L | G (délivrance) | — |
 | Suites NESDA (dossier déposé / accepté / abouti) | A | L | L | G (saisie) | — |
 | Questionnaires de satisfaction | Modèle : G ; résultats : A | A | A | A (+ commentaires anonymes) | A (ses séances) |
 | Rapport trimestriel institut | A | V (consolide) | V (consolide) | G puis V, transmet | — |
 | Rapport trimestriel wilaya | L | G + V, transmet | G | — | — |
-| Tableau de bord | National, wilaya par wilaya | Wilaya, institut par institut | Wilaya, institut par institut | Institut | Ses séances |
+| Tableau de bord | National : les 69 wilayas et tous les CDE, avec statut des objectifs | Wilaya, institut par institut | Wilaya, institut par institut | Institut | Ses séances |
 | Journal d'audit | L (actions MFEP) | L (sa wilaya) | L (sa wilaya) | L (son institut) | — |
 
 **Règle de cloisonnement (loi n° 18-07)** : le MFEP ne voit **jamais** de nom, de téléphone ni d'e-mail de participant. Toutes ses vues passent par des agrégats calculés côté serveur. Un filtre de périmètre unique (`scope_query`) est appliqué à chaque requête selon le rôle ; aucun écran ne fait de requête « brute ».
@@ -79,7 +82,8 @@ Légende : **G** = gère (créer/modifier) · **V** = valide · **L** = lit (nom
 ## 4. Circuits de validation
 
 ### 4.1 Circuit annuel
-1. **MFEP** publie le référentiel et fixe les objectifs annuels par wilaya.
+1. **MFEP**, à l'ouverture de l'année professionnelle, publie le référentiel et saisit les objectifs de l'année pour chaque wilaya (et, s'il le souhaite, directement pour certains CDE).
+1 bis. **DFEP** répartit l'objectif de sa wilaya entre ses CDE (la somme est contrôlée).
 2. **Coordinateur** rédige le programme annuel de la wilaya (formations du catalogue × instituts × trimestres).
 3. **DFEP** valide (ou renvoie avec observations).
 4. **Responsable CDE** planifie les sessions dans son institut, rattachées aux lignes du programme.
@@ -111,14 +115,40 @@ Règles :
 - Un module a **un seul superviseur**, mais peut être animé par d'autres intervenants selon les groupes (le superviseur reste responsable du contenu et du suivi).
 - La présence est enregistrée par créneau, donc les heures se ventilent automatiquement par module, par groupe et par enseignant.
 
-### 4.4 Statuts d'une session (repris de l'existant)
+### 4.4 L'appel par l'enseignant
+L'enseignant ouvre sa séance (seulement le jour même, seulement ses créneaux) et voit la liste nominative du groupe :
+- un geste par participant : **présent / absent / en retard / excusé** ; « tous présents » en un clic puis on décoche les absents ;
+- heure d'arrivée et de départ modifiables pour un retard ou un départ anticipé ;
+- les modes QR (ticket, QR de salle) et le code en ligne restent disponibles en complément ; l'appel de l'enseignant fait foi ;
+- l'appel est **verrouillé** à la fin de la journée ; seul le responsable CDE peut ensuite le corriger (correction tracée au journal).
+
+### 4.5 Statut des objectifs (wilayas et CDE)
+Calculé indicateur par indicateur, puis résumé par wilaya et par CDE :
+
+| Statut | Règle (en cours d'année) | Règle (année close) |
+|---|---|---|
+| Atteint | réalisé ≥ 100 % de la cible | réalisé ≥ 100 % |
+| En bonne voie | réalisé ≥ cible × part de l'année écoulée | — |
+| En retard | réalisé < cible × part de l'année écoulée | — |
+| Non atteint | — | réalisé < 100 % |
+| Non fixé | aucune cible saisie | aucune cible saisie |
+
+Pour les indicateurs « plus bas = mieux » (taux de déperdition), la comparaison est inversée. Le statut global d'une wilaya ou d'un CDE = proportion de ses objectifs atteints ou en bonne voie (seuil paramétrable, par défaut 80 %).
+
+### 4.6 Vue nationale du MFEP
+- Tableau des **69 wilayas** : CDE, groupes, formés, assiduité, statut des objectifs ; recherche et filtre par statut (atteint, en bonne voie, en retard, non atteint, non fixé).
+- Descente wilaya → liste de ses CDE avec leur propre statut.
+- **Comparaison de 2 à 5 wilayas** côte à côte sur les 15 indicateurs, avec cible et statut de chacun.
+- Toujours sans donnée nominative.
+
+### 4.7 Statuts d'une session (repris de l'existant)
 Brouillon → Inscriptions ouvertes → En cours (inscriptions fermées) → Terminée.
 
 ---
 
 ## 5. Indicateurs (KPI) communs — définitions calculées
 
-Période = trimestre ou année civile ; périmètre = institut, wilaya ou national. Chaque indicateur est affiché avec sa **cible** (objectif MFEP) et son taux de réalisation, ventilable par institut, thème et sexe.
+Période = trimestre ou année professionnelle ; périmètre = institut, wilaya ou national. Chaque indicateur est affiché avec sa **cible** (objectif MFEP) et son taux de réalisation, ventilable par institut, thème et sexe.
 
 ### 5.1 Activité de formation
 | # | Indicateur | Définition exacte |
@@ -179,7 +209,7 @@ Tables principales :
 | `institute` | wilaya_id, code (`INSFP-BBA-01`), nom_fr, nom_ar, adresse, cde_ouvert_le |
 | `user` | nom, e-mail, téléphone, rôle, wilaya_id, institute_id, langue, actif, dernière connexion |
 | `workshop_template` | thème, titre/objectifs FR+AR, durée, type (atelier, bootcamp, séminaire, événement) |
-| `objective` | année, wilaya_id, indicateur, cible |
+| `objective` | année professionnelle, wilaya_id, institute_id (facultatif), indicateur, cible, saisi_par, saisi_le |
 | `programme` / `programme_line` | wilaya, année, statut, validé_par / atelier, institut, trimestre, nb prévu |
 | `session` | institut **ou** wilaya (événement), formation du catalogue, mode, lieu/lien, places, seuil d'assiduité, contrôle entrée/sortie, confirmation auto, statut |
 | `seance` / `slot` | groupe, date, horaire / module, enseignant intervenant, début, fin, jetons de scan, codes d'entrée/sortie |

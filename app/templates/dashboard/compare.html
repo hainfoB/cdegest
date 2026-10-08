@@ -1,0 +1,24 @@
+{% extends "app.html" %}
+{% block title %}{{ t('cmp.title') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{{ t('cmp.title') }}</h1><p><a href="{{ url_for('main.dashboard') }}">{{ t('cmp.back') }}</a></p></div>
+  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=quarter) }}</span>
+</div>
+{% if wilayas|length < 2 %}
+  <div class="panel"><div class="emptybox">{{ icon('columns', 48) }}<p>{{ t('cmp.empty') }}</p></div></div>
+{% else %}
+<div class="empty-note">{{ icon('info', 18) }}<span>{{ t('dash.empty') }}</span></div>
+<div class="panel cmp">
+<table class="tbl"><thead><tr><th>{{ t('cmp.indicator') }}</th>{% for w in wilayas %}<th class="wcol"><span class="code">{{ w.code }}</span> {{ w.name(lang) }}{% if w.is_demo %}<span class="tag">DEMO</span>{% endif %}</th>{% endfor %}</tr></thead>
+<tbody>
+<tr class="famrow"><td colspan="{{ wilayas|length + 1 }}">{{ t('obj.status') }}</td></tr>
+<tr><td>{{ t('obj.status') }}</td>{% for w in wilayas %}<td><span class="stp st-none-p"><i class="st st-none"></i>{{ t('obj.none') }}</span></td>{% endfor %}</tr>
+<tr><td>{{ t('nat.cde') }}</td>{% for w in wilayas %}<td class="num">{{ w.institutes|length }}</td>{% endfor %}</tr>
+{% for fam, keys in families %}
+<tr class="famrow"><td colspan="{{ wilayas|length + 1 }}">{{ t('kpi.family.' ~ fam) }}</td></tr>
+{% for k in keys %}<tr><td><span class="kl">{{ icon(icons[k], 18) }}{{ t('kpi.' ~ k) }}</span></td>{% for w in wilayas %}<td class="num">—<small class="tgt">{{ t('kpi.target') }} : —</small></td>{% endfor %}</tr>{% endfor %}
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}

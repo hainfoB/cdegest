@@ -62,7 +62,7 @@ def _u(email):
 
 def test_mfep_sees_all_wilayas_but_no_institute_staff(app):
     u = _u("mfep@cdegest.dz")
-    assert visible_wilayas(u).count() == 3
+    assert visible_wilayas(u).count() == 69
     roles = {x.role for x in visible_users(u)}
     assert roles <= {"mfep", "dfep", "coord"}, "MFEP must not list institute staff"
 
@@ -97,3 +97,21 @@ def test_wilaya_dashboard_does_not_leak_other_wilayas(client):
     login(client, "coord.bba@cdegest.dz")
     html = client.get("/tableau-de-bord?lang=fr").get_data(as_text=True)
     assert "INSFP-BBA-01" in html and "INSFP-STF-01" not in html and "INSFP-MSL-01" not in html
+
+
+def test_compare_reserved_to_national(client):
+    login(client, "coord.bba@cdegest.dz")
+    assert client.get("/comparaison?w=34&w=19").status_code == 403
+
+
+def test_compare_caps_at_five(client):
+    login(client, "mfep@cdegest.dz")
+    html = client.get("/comparaison?lang=fr&w=01&w=16&w=19&w=31&w=34&w=69").get_data(as_text=True)
+    assert html.count('class="wcol"') == 5
+
+
+def test_training_year():
+    from datetime import date
+    from app.services.period import training_year
+    assert training_year(date(2026, 10, 8))[0] == "2026-2027" and training_year(date(2026, 10, 8))[3] == 1
+    assert training_year(date(2027, 3, 1))[3] == 3 and training_year(date(2027, 8, 31))[0] == "2026-2027"

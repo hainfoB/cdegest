@@ -36,6 +36,7 @@ AGGREGATE_ONLY = {MFEP}
 # Sidebar: (endpoint or None if not built yet, icon, i18n key, roles, step where it arrives)
 NAV = [
     ("main.dashboard", "grid", "nav.dashboard", set(ROLES), None),
+    ("main.compare", "columns", "nav.compare", {ADMIN, MFEP}, None),
     (None, "book", "nav.referentiel", {ADMIN, MFEP, DFEP, COORD, RESP}, 3),
     (None, "target", "nav.objectives", {ADMIN, MFEP, DFEP, COORD}, 3),
     (None, "calendar", "nav.programme", {ADMIN, DFEP, COORD, RESP}, 3),

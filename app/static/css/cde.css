@@ -169,6 +169,30 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
 .emptybox{text-align:center;padding:48px 20px;color:var(--mut)}
 .emptybox .ic{color:var(--cde);width:48px;height:48px;margin-bottom:12px}
 
+.muted{color:var(--mut);font-size:14px}
+.panelhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.panelhead h2{margin-bottom:2px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.tools{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.searchbox{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;color:var(--mut);min-width:240px}
+.searchbox input{border:0;outline:0;font:inherit;color:var(--ink);background:transparent;width:100%}
+.searchbox:focus-within{border-color:var(--cde)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font:600 13px var(--fl);color:var(--ink-2);cursor:pointer}
+[dir=rtl] .chip{font-family:var(--fa);font-size:14px}
+.chip.on{border-color:var(--cde);background:var(--cde-50);color:var(--ink)}
+.st{width:9px;height:9px;border-radius:50%;display:inline-block;background:#c3ccd5}
+.st-all{background:var(--ink)}.st-met{background:#12B886}.st-track{background:var(--cde)}.st-late{background:#F59F00}.st-missed{background:var(--bad)}.st-none{background:#c3ccd5}
+.stp{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;border-radius:999px;padding:3px 10px;background:var(--bg);color:var(--mut)}
+.tbl input[type=checkbox]{width:18px;height:18px;accent-color:var(--cde-600)}
+#natTbl tbody tr:has(.wpick:checked){background:var(--cde-50)}
+.cmp .tbl th.wcol{text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)}
+.cmp .famrow td{background:var(--bg);font-weight:800;font-size:13px;color:var(--ink-2)}
+.cmp td small.tgt{display:block;font-size:11.5px;color:var(--mut)}
+.cmp td:first-child{position:sticky;inset-inline-start:0;background:#fff;min-width:200px}
+.cmp .famrow td:first-child{background:var(--bg)}
+.kl{display:inline-flex;align-items:center;gap:8px}.kl .ic{color:var(--cde-700)}
+
 /* error */
 .errpage{min-height:70vh;display:grid;place-items:center;text-align:center;padding:40px 16px}
 .errpage b{font:800 72px var(--fl);color:var(--cde)}

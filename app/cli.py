@@ -7,12 +7,10 @@ import click
 from .extensions import db
 from .models import Institute, User, Wilaya
 
-WILAYAS = [
-    # code, fr, ar, fictitious data?
-    ("34", "Bordj Bou Arréridj", "برج بوعريريج", False),
-    ("19", "Sétif", "سطيف", True),
-    ("28", "M'Sila", "المسيلة", True),
-]
+from .data_wilayas import WILAYAS_69
+
+# Wilayas whose demo data are fictitious (BBA is the pilot wilaya)
+DEMO_WILAYAS = {"19", "28"}
 
 INSTITUTES = [
     # code, wilaya, fr, ar
@@ -41,10 +39,10 @@ DEMO_USERS = [
 def seed_base(demo=True, password=None):
     created = 0
     by_code = {}
-    for code, fr, ar, fake in WILAYAS:
+    for code, fr, ar in WILAYAS_69:
         w = Wilaya.query.filter_by(code=code).first()
         if not w:
-            w = Wilaya(code=code, name_fr=fr, name_ar=ar, is_demo=fake)
+            w = Wilaya(code=code, name_fr=fr, name_ar=ar, is_demo=demo and code in DEMO_WILAYAS)
             db.session.add(w)
             created += 1
         by_code[code] = w

@@ -1,10 +1,10 @@
-from datetime import date
-
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from ..extensions import db
-from ..security import ADMIN, COORD, DFEP, MFEP, RESP, TEACHER, visible_institutes, visible_users, visible_wilayas
+from ..models import Wilaya
+from ..security import ADMIN, COORD, DFEP, MFEP, RESP, TEACHER, roles_required, visible_institutes, visible_users, visible_wilayas
+from ..services.period import training_year
 
 bp = Blueprint("main", __name__)
 
@@ -51,10 +51,10 @@ def set_lang(code):
 @login_required
 def dashboard():
     u = current_user
-    today = date.today()
+    label, _start, _end, quarter = training_year()
     ctx = {
-        "year": today.year,
-        "quarter": (today.month - 1) // 3 + 1,
+        "year": "\u2066" + label + "\u2069",  # isolate LTR inside RTL text
+        "quarter": quarter,
         "families": KPI_FAMILIES,
         "icons": KPI_ICONS,
     }
@@ -72,3 +72,13 @@ def dashboard():
         ctx["accounts"] = visible_users(u).filter_by(active=True).count()
         ctx["n_wilayas"] = visible_wilayas(u).count()
     return render_template("dashboard/index.html", **ctx)
+
+
+@bp.route("/comparaison")
+@roles_required(ADMIN, MFEP)
+def compare():
+    codes = [c for c in request.args.getlist("w") if c][:5]
+    wilayas = Wilaya.query.filter(Wilaya.code.in_(codes)).order_by(Wilaya.code).all() if codes else []
+    label, _s, _e, quarter = training_year()
+    return render_template("dashboard/compare.html", wilayas=wilayas, families=KPI_FAMILIES,
+                           icons=KPI_ICONS, year="\u2066" + label + "\u2069", quarter=quarter)
