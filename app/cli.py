@@ -1,5 +1,6 @@
 """Command line: `flask --app wsgi seed-base` (idempotent, safe to run at every deploy)."""
 import os
+import secrets
 from datetime import date
 
 import click
@@ -23,12 +24,12 @@ INSTITUTES = [
 
 # show = displayed on the demo login page
 DEMO_USERS = [
-    {"email": "admin@cdegest.dz", "name": "Administrateur plateforme", "role": "admin", "show": False},
-    {"email": "mfep@cdegest.dz", "name": "Direction centrale MFEP", "role": "mfep", "show": True},
-    {"email": "dfep.bba@cdegest.dz", "name": "DFEP Bordj Bou Arréridj", "role": "dfep", "wilaya": "34", "show": True, "scope": {'ar': 'برج بوعريريج', 'fr': 'BBA', 'en': 'BBA'}},
-    {"email": "coord.bba@cdegest.dz", "name": "Coordinateur CDE BBA", "role": "coord", "wilaya": "34", "show": True, "scope": {'ar': 'برج بوعريريج', 'fr': 'BBA', 'en': 'BBA'}},
-    {"email": "resp.insfp-bba01@cdegest.dz", "name": "Responsable CDE INSFP BBA 01", "role": "resp", "institute": "INSFP-BBA-01", "show": True, "scope": {'ar': 'المعهد BBA 01', 'fr': 'INSFP BBA 01', 'en': 'INSFP BBA 01'}},
-    {"email": "formateur.bba01@cdegest.dz", "name": "Enseignant INSFP BBA 01", "role": "formateur", "institute": "INSFP-BBA-01", "show": True, "scope": {'ar': 'المعهد BBA 01', 'fr': 'INSFP BBA 01', 'en': 'INSFP BBA 01'}},
+    {"email": "admin@cdegest.dz", "pwd_env": "ADMIN_PASSWORD", "name": "Administrateur plateforme", "role": "admin", "show": False},
+    {"email": "mfep@cdegest.dz", "pwd_env": "PASSWORD_MFEP", "name": "Direction centrale MFEP", "role": "mfep", "show": True},
+    {"email": "dfep.bba@cdegest.dz", "pwd_env": "PASSWORD_DFEP_BBA", "name": "DFEP Bordj Bou Arréridj", "role": "dfep", "wilaya": "34", "show": True, "scope": {'ar': 'برج بوعريريج', 'fr': 'BBA', 'en': 'BBA'}},
+    {"email": "coord.bba@cdegest.dz", "pwd_env": "PASSWORD_COORD_BBA", "name": "Coordinateur CDE BBA", "role": "coord", "wilaya": "34", "show": True, "scope": {'ar': 'برج بوعريريج', 'fr': 'BBA', 'en': 'BBA'}},
+    {"email": "resp.insfp-bba01@cdegest.dz", "pwd_env": "PASSWORD_RESP_BBA01", "name": "Responsable CDE INSFP BBA 01", "role": "resp", "institute": "INSFP-BBA-01", "show": True, "scope": {'ar': 'المعهد BBA 01', 'fr': 'INSFP BBA 01', 'en': 'INSFP BBA 01'}},
+    {"email": "formateur.bba01@cdegest.dz", "pwd_env": "PASSWORD_ENSEIGNANT_BBA01", "name": "Enseignant INSFP BBA 01", "role": "formateur", "institute": "INSFP-BBA-01", "show": True, "scope": {'ar': 'المعهد BBA 01', 'fr': 'INSFP BBA 01', 'en': 'INSFP BBA 01'}},
     {"email": "resp.insfp-bba02@cdegest.dz", "name": "Responsable CDE INSFP BBA 02", "role": "resp", "institute": "INSFP-BBA-02", "show": False},
     {"email": "dfep.setif@cdegest.dz", "name": "DFEP Sétif", "role": "dfep", "wilaya": "19", "show": False},
     {"email": "coord.setif@cdegest.dz", "name": "Coordinateur CDE Sétif", "role": "coord", "wilaya": "19", "show": False},
@@ -36,7 +37,9 @@ DEMO_USERS = [
 ]
 
 
-def seed_base(demo=True, password=None):
+def seed_base(demo=True, default_password=None):
+    """Passwords come from each account's environment variable; otherwise
+    `default_password` (tests) or a random secret nobody knows (reset with `flask set-password`)."""
     created = 0
     by_code = {}
     for code, fr, ar in WILAYAS_69:
@@ -68,7 +71,7 @@ def seed_base(demo=True, password=None):
         if "institute" in spec:
             u.institute = insts[spec["institute"]]
             u.wilaya = insts[spec["institute"]].wilaya
-        pwd = password if spec["role"] != "admin" else os.environ.get("ADMIN_PASSWORD", password)
+        pwd = os.environ.get(spec.get("pwd_env", "")) or default_password or secrets.token_urlsafe(24)
         u.set_password(pwd)
         db.session.add(u)
         created += 1
@@ -80,5 +83,30 @@ def register_cli(app):
     @app.cli.command("seed-base")
     def seed_base_cmd():
         """Wilayas, institutes and (in demo mode) demo accounts. Idempotent."""
-        n = seed_base(demo=app.config["DEMO_MODE"], password=app.config["DEMO_PASSWORD"])
+        n = seed_base(demo=app.config["DEMO_MODE"])
         click.echo(f"seed-base: {n} élément(s) créé(s)")
+
+    @app.cli.command("set-password")
+    @click.argument("email")
+    @click.password_option()
+    def set_password_cmd(email, password):
+        """Change the password of an account (prompted, never echoed)."""
+        u = User.query.filter_by(email=email.strip().lower()).first()
+        if not u:
+            raise click.ClickException("compte introuvable")
+        u.set_password(password)
+        db.session.commit()
+        click.echo("mot de passe modifié")
+
+    @app.cli.command("sync-passwords")
+    def sync_passwords_cmd():
+        """Re-apply the PASSWORD_* environment variables to existing accounts."""
+        n = 0
+        for spec in DEMO_USERS:
+            pwd = os.environ.get(spec.get("pwd_env", ""))
+            u = User.query.filter_by(email=spec["email"]).first()
+            if pwd and u and not u.check_password(pwd):
+                u.set_password(pwd)
+                n += 1
+        db.session.commit()
+        click.echo(f"sync-passwords: {n} compte(s) mis à jour")

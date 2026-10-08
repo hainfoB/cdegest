@@ -9,7 +9,7 @@ Dossier d'architecture : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 | Étape | Contenu | État |
 |---|---|---|
 | 1 | Architecture, rôles, droits, indicateurs | ✅ validée |
-| 2 | Socle technique, connexion par rôle, i18n, charte CDE | ✅ livrée |
+| 2 | Socle technique, connexion par rôle, i18n, charte CDE, vue nationale 69 wilayas, comparaison | ✅ livrée |
 | 3 | Référentiel, objectifs, programme annuel, instituts, comptes, journal | à venir |
 | 4 | Sessions, modules, groupes, inscriptions, présence, attestations | à venir |
 | 5 | Questionnaire de satisfaction, statut NESDA | à venir |
@@ -27,16 +27,19 @@ flask run               # http://localhost:5000
 pytest -q               # tests (dont le cloisonnement par rôle)
 ```
 
-## Comptes de démonstration (DEMO_MODE=1)
-Mot de passe commun : `Cde@2026`
+## Comptes d'accès
+Les comptes ne sont **jamais affichés** sur la page de connexion. Chaque mot de passe vient d'une variable d'environnement Railway ; à défaut, un secret aléatoire est généré (réinitialisable par `flask set-password <email>`).
 
-| Rôle | E-mail |
-|---|---|
-| MFEP | mfep@cdegest.dz |
-| DFEP Bordj Bou Arréridj | dfep.bba@cdegest.dz |
-| Coordinateur CDE BBA | coord.bba@cdegest.dz |
-| Responsable CDE INSFP BBA 01 | resp.insfp-bba01@cdegest.dz |
-| Enseignant INSFP BBA 01 | formateur.bba01@cdegest.dz |
+| Rôle | E-mail | Variable du mot de passe |
+|---|---|---|
+| MFEP | mfep@cdegest.dz | `PASSWORD_MFEP` |
+| DFEP Bordj Bou Arréridj | dfep.bba@cdegest.dz | `PASSWORD_DFEP_BBA` |
+| Coordinateur CDE BBA | coord.bba@cdegest.dz | `PASSWORD_COORD_BBA` |
+| Responsable CDE INSFP BBA 01 | resp.insfp-bba01@cdegest.dz | `PASSWORD_RESP_BBA01` |
+| Enseignant INSFP BBA 01 | formateur.bba01@cdegest.dz | `PASSWORD_ENSEIGNANT_BBA01` |
+| Administrateur plateforme | admin@cdegest.dz | `ADMIN_PASSWORD` |
+
+Modifier une variable puis redéployer applique le nouveau mot de passe (`flask sync-passwords` au démarrage).
 
 ## Variables d'environnement (Railway)
 | Variable | Rôle |
@@ -44,7 +47,8 @@ Mot de passe commun : `Cde@2026`
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
 | `SECRET_KEY` | longue chaîne aléatoire |
 | `APP_URL` | URL publique (active les cookies sécurisés) |
-| `DEMO_MODE` | `1` en test (comptes démo affichés), `0` en production |
-| `DEMO_PASSWORD` / `ADMIN_PASSWORD` | mots de passe initiaux |
+| `DEMO_MODE` | `1` : charge les données fictives de Sétif et M'Sila et affiche le bandeau de démonstration |
+| `SHOW_DEMO_ACCOUNTS` | laisser à `0` (aucun compte affiché sur la page de connexion) |
+| `PASSWORD_*`, `ADMIN_PASSWORD` | mots de passe des comptes (voir ci-dessus) |
 
 Au démarrage, le `Procfile` applique les migrations puis `seed-base` (idempotent).

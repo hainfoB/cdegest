@@ -1,7 +1,7 @@
 # CDEgest — Dossier d'architecture (Étape 1)
 
 > Plateforme de gestion du réseau des Centres de développement de l'entrepreneuriat (CDE) : de l'institut (INSFP) à la wilaya (DFEP), jusqu'au ministère (MFEP).
-> Version 1.4 — 8 octobre 2026 — à valider avant l'étape 2.
+> Version 1.5 — 8 octobre 2026 — à valider avant l'étape 2.
 
 ---
 
@@ -15,7 +15,7 @@
 | Langues | Arabe (RTL, langue par défaut), français, anglais |
 | Territoire | **69 wilayas** (codes 59 à 69 : décret présidentiel n° 26-206 du 25 mai 2026), toutes chargées en base |
 | Démo | Bordj Bou Arréridj (wilaya pilote) + Sétif et M'Sila avec **données fictives** clairement signalées |
-| Période | **Année professionnelle** de septembre à août (mois de début paramétrable), découpée en 4 trimestres : T1 sept.–nov., T2 déc.–févr., T3 mars–mai, T4 juin–août |
+| Période | **Année professionnelle** de septembre à août (mois de début paramétrable), découpée en **2 semestres** : S1 septembre–février, S2 mars–août. Les KPI (dont le nombre de groupes) sont mesurés **par semestre et par année professionnelle** |
 | Hébergement | Railway (service web + PostgreSQL), dépôt `hainfoB/cdegest` |
 | Mission | **Le CDE forme.** L'accompagnement des porteurs de projet relève de la NESDA : CDEgest ne le gère pas, il **enregistre seulement le résultat** (dossier accepté, projet abouti) communiqué par la NESDA, pour mesurer la conversion |
 | Satisfaction | Questionnaire de fin de session, anonyme, depuis le ticket du participant |
@@ -70,8 +70,8 @@ Légende : **G** = gère (créer/modifier) · **V** = valide · **L** = lit (nom
 | Attestations | A | L | L | G (délivrance) | — |
 | Suites NESDA (dossier déposé / accepté / abouti) | A | L | L | G (saisie) | — |
 | Questionnaires de satisfaction | Modèle : G ; résultats : A | A | A | A (+ commentaires anonymes) | A (ses séances) |
-| Rapport trimestriel institut | A | V (consolide) | V (consolide) | G puis V, transmet | — |
-| Rapport trimestriel wilaya | L | G + V, transmet | G | — | — |
+| Rapport semestriel institut | A | V (consolide) | V (consolide) | G puis V, transmet | — |
+| Rapport semestriel wilaya | L | G + V, transmet | G | — | — |
 | Tableau de bord | National : les 69 wilayas et tous les CDE, avec statut des objectifs | Wilaya, institut par institut | Wilaya, institut par institut | Institut | Ses séances |
 | Journal d'audit | L (actions MFEP) | L (sa wilaya) | L (sa wilaya) | L (son institut) | — |
 
@@ -84,13 +84,13 @@ Légende : **G** = gère (créer/modifier) · **V** = valide · **L** = lit (nom
 ### 4.1 Circuit annuel
 1. **MFEP**, à l'ouverture de l'année professionnelle, publie le référentiel et saisit les objectifs de l'année pour chaque wilaya (et, s'il le souhaite, directement pour certains CDE).
 1 bis. **DFEP** répartit l'objectif de sa wilaya entre ses CDE (la somme est contrôlée).
-2. **Coordinateur** rédige le programme annuel de la wilaya (formations du catalogue × instituts × trimestres).
+2. **Coordinateur** rédige le programme annuel de la wilaya (formations du catalogue × instituts × semestres).
 3. **DFEP** valide (ou renvoie avec observations).
 4. **Responsable CDE** planifie les sessions dans son institut, rattachées aux lignes du programme.
 5. **Formateurs** animent et pointent la présence.
 6. Le **système** calcule les indicateurs en continu.
 
-### 4.2 Rapport trimestriel (remontée)
+### 4.2 Rapport semestriel (remontée)
 ```
 Institut : brouillon → validé par le resp. → transmis au coordinateur
 Wilaya   : consolidation (quand tous les instituts ont transmis, ou forcée) → brouillon → validé par la DFEP → transmis au MFEP
@@ -148,12 +148,12 @@ Brouillon → Inscriptions ouvertes → En cours (inscriptions fermées) → Ter
 
 ## 5. Indicateurs (KPI) communs — définitions calculées
 
-Période = trimestre ou année professionnelle ; périmètre = institut, wilaya ou national. Chaque indicateur est affiché avec sa **cible** (objectif MFEP) et son taux de réalisation, ventilable par institut, thème et sexe.
+Période = semestre ou année professionnelle ; périmètre = institut, wilaya ou national. Chaque indicateur est affiché avec sa **cible** (objectif MFEP) et son taux de réalisation, ventilable par institut, thème et sexe.
 
 ### 5.1 Activité de formation
 | # | Indicateur | Définition exacte |
 |---|---|---|
-| 1 | Groupes formés | Groupes ayant terminé leur dernière séance dans la période (une session compte un ou plusieurs groupes) |
+| 1 | Groupes formés | Groupes ayant terminé leur dernière séance dans le semestre ; cumul sur l'année professionnelle (une session compte un ou plusieurs groupes). Cible fixée par semestre et par année |
 | 2 | Sessions réalisées | Sessions passées au statut « Terminée » dans la période |
 | 3 | Participants formés | Participants distincts présents à au moins une séance |
 | 4 | Enseignants mobilisés | Enseignants distincts intervenus dans au moins un créneau ; affiché avec le nombre de modules supervisés |
@@ -198,7 +198,7 @@ Wilaya ─< Institute ─< User (resp, formateur)
    │                 └─< Enrollment >─ Participant ─── statut NESDA
    ├─< Objective (année, indicateur, cible)
    ├─< Programme ─< ProgrammeLine >─ WorkshopTemplate (catalogue MFEP)
-   └─< Report (niveau, trimestre, statut, instantané JSON)
+   └─< Report (niveau, semestre, statut, instantané JSON)
 ```
 
 Tables principales :
@@ -210,7 +210,7 @@ Tables principales :
 | `user` | nom, e-mail, téléphone, rôle, wilaya_id, institute_id, langue, actif, dernière connexion |
 | `workshop_template` | thème, titre/objectifs FR+AR, durée, type (atelier, bootcamp, séminaire, événement) |
 | `objective` | année professionnelle, wilaya_id, institute_id (facultatif), indicateur, cible, saisi_par, saisi_le |
-| `programme` / `programme_line` | wilaya, année, statut, validé_par / atelier, institut, trimestre, nb prévu |
+| `programme` / `programme_line` | wilaya, année, statut, validé_par / atelier, institut, semestre, nb prévu |
 | `session` | institut **ou** wilaya (événement), formation du catalogue, mode, lieu/lien, places, seuil d'assiduité, contrôle entrée/sortie, confirmation auto, statut |
 | `seance` / `slot` | groupe, date, horaire / module, enseignant intervenant, début, fin, jetons de scan, codes d'entrée/sortie |
 | `participant` | nom, prénom, e-mail, téléphone, wilaya, institut d'origine, spécialité, année de diplôme, statut (stagiaire / diplômé), **consentement** (date) |
@@ -221,7 +221,7 @@ Tables principales :
 | `participant` (suite) | statut NESDA (non déposé / déposé / accepté / abouti), date du statut |
 | `survey_template` / `survey_response` | questions FR+AR+EN / session, réponses JSON, date (sans identité stockée) |
 | `attendance` | séance, inscription, statut, entrée, sortie, méthode |
-| `report` | niveau, périmètre, année, trimestre, statut, instantané, validé_par, transmis_le |
+| `report` | niveau, périmètre, année professionnelle, semestre (1 ou 2), statut, instantané, validé_par, transmis_le |
 | `audit_log` | utilisateur, action, objet, détails, date, IP |
 
 Conservation : purge (anonymisation) des données nominatives des participants N années après leur dernière activité — durée paramétrable par le MFEP.

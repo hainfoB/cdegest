@@ -51,10 +51,10 @@ def set_lang(code):
 @login_required
 def dashboard():
     u = current_user
-    label, _start, _end, quarter = training_year()
+    label, _start, _end, semester = training_year()
     ctx = {
         "year": "\u2066" + label + "\u2069",  # isolate LTR inside RTL text
-        "quarter": quarter,
+        "semester": semester,
         "families": KPI_FAMILIES,
         "icons": KPI_ICONS,
     }
@@ -79,6 +79,6 @@ def dashboard():
 def compare():
     codes = [c for c in request.args.getlist("w") if c][:5]
     wilayas = Wilaya.query.filter(Wilaya.code.in_(codes)).order_by(Wilaya.code).all() if codes else []
-    label, _s, _e, quarter = training_year()
+    label, _s, _e, semester = training_year()
     return render_template("dashboard/compare.html", wilayas=wilayas, families=KPI_FAMILIES,
-                           icons=KPI_ICONS, year="\u2066" + label + "\u2069", quarter=quarter)
+                           icons=KPI_ICONS, year="\u2066" + label + "\u2069", semester=semester)

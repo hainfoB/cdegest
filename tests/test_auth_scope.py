@@ -113,5 +113,31 @@ def test_compare_caps_at_five(client):
 def test_training_year():
     from datetime import date
     from app.services.period import training_year
+    from app.services.period import semester_bounds
     assert training_year(date(2026, 10, 8))[0] == "2026-2027" and training_year(date(2026, 10, 8))[3] == 1
-    assert training_year(date(2027, 3, 1))[3] == 3 and training_year(date(2027, 8, 31))[0] == "2026-2027"
+    assert training_year(date(2027, 2, 28))[3] == 1 and training_year(date(2027, 3, 1))[3] == 2
+    assert training_year(date(2027, 8, 31))[0] == "2026-2027" and training_year(date(2027, 9, 1))[0] == "2027-2028"
+    assert semester_bounds("2026-2027", 1) == (date(2026, 9, 1), date(2027, 2, 28))
+    assert semester_bounds("2026-2027", 2) == (date(2027, 3, 1), date(2027, 8, 31))
+
+
+def test_login_page_lists_no_account(client):
+    html = client.get("/login?lang=fr").get_data(as_text=True)
+    assert "@cdegest.dz" not in html
+
+
+def test_password_from_environment(monkeypatch):
+    from app import create_app
+    from app.cli import seed_base
+    from app.config import TestConfig
+    from app.extensions import db
+    monkeypatch.setenv("PASSWORD_MFEP", "Xy7-very-private")
+    app = create_app(TestConfig)
+    with app.app_context():
+        db.create_all()
+        seed_base(demo=True)
+        mfep = User.query.filter_by(email="mfep@cdegest.dz").first()
+        coord = User.query.filter_by(email="coord.bba@cdegest.dz").first()
+        assert mfep.check_password("Xy7-very-private")
+        assert not coord.check_password("Cde@2026"), "no shared default password outside tests"
+        db.drop_all()

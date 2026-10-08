@@ -6,7 +6,7 @@
     <h1>{{ t('dash.hello', name=current_user.name) }}</h1>
     <p>{{ t({'national':'dash.national','wilaya':'dash.wilaya','institute':'dash.institute','teacher':'dash.teacher'}[view]) }}</p>
   </div>
-  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=quarter) }}</span>
+  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=semester) }}</span>
 </div>
 
 {% if view != 'teacher' %}

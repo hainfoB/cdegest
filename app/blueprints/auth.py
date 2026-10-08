@@ -37,7 +37,7 @@ def _safe_next(target):
 
 
 def demo_accounts():
-    if not current_app.config["DEMO_MODE"]:
+    if not current_app.config["SHOW_DEMO_ACCOUNTS"]:
         return []
     from ..cli import DEMO_USERS
     return [u for u in DEMO_USERS if u["show"]]

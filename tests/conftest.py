@@ -13,7 +13,7 @@ def app():
     app = create_app(TestConfig)
     with app.app_context():
         db.create_all()
-        seed_base(demo=True, password=PWD)
+        seed_base(demo=True, default_password=PWD)
         yield app
         db.session.remove()
         db.drop_all()

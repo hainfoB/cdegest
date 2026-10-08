@@ -19,7 +19,8 @@ class Config:
     APP_NAME = "CDEgest"
     APP_URL = os.environ.get("APP_URL", "http://localhost:5000")
     DEMO_MODE = os.environ.get("DEMO_MODE", "1") == "1"
-    DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "Cde@2026")
+    # Show clickable accounts on the login page (never in production)
+    SHOW_DEMO_ACCOUNTS = os.environ.get("SHOW_DEMO_ACCOUNTS", "0") == "1"
     DEFAULT_LANG = "ar"
     LANGS = ("ar", "fr", "en")
     TIMEZONE = "Africa/Algiers"

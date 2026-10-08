@@ -3,7 +3,7 @@
 {% block content %}
 <div class="pagehead">
   <div><h1>{{ t('cmp.title') }}</h1><p><a href="{{ url_for('main.dashboard') }}">{{ t('cmp.back') }}</a></p></div>
-  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=quarter) }}</span>
+  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=semester) }}</span>
 </div>
 {% if wilayas|length < 2 %}
   <div class="panel"><div class="emptybox">{{ icon('columns', 48) }}<p>{{ t('cmp.empty') }}</p></div></div>
