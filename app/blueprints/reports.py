@@ -144,42 +144,37 @@ def view(rid):
 @bp.route("/<int:rid>.xlsx")
 @roles_required(ADMIN, MFEP, DFEP, COORD, RESP)
 def export(rid):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
+    from ..i18n import get_lang
+    from ..services import xl
     r = _get(rid)
     d = r.data()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Indicateurs"
-    hdr = Font(bold=True, color="FFFFFF")
-    fill = PatternFill("solid", fgColor="0D1B2A")
+    lang = get_lang()
+    wb = xl.book()
+    ws = xl.sheet(wb, t("xl.kpis"), first=True)
     scope = d.get("institute") or d.get("wilaya") or {}
-    ws.append([f"CDEgest — rapport {'institut' if r.level == 'institute' else 'wilaya'} — {scope.get('fr', '')}"])
-    ws.append([f"Année professionnelle {r.year} — semestre {r.semester} — {r.status}"])
+    name = scope.get(lang) or scope.get("fr", "")
+    ws.append([f"CDEgest — {t('rep.title_inst') if r.level == 'institute' else t('rep.title_wil')} — {name}"])
+    ws.append([f"{r.year} — S{r.semester} — {t('xl.rep.' + r.status)}"])
     ws.append([])
-    ws.append(["Indicateur", "Réalisé", "Cible", "Statut"])
-    for c in ws[4]:
-        c.font, c.fill = hdr, fill
+    ws.append([t("xl.kpi"), t("rep.realised"), t("kpi.target"), t("xl.status")])
+    xl.header(ws, 4)
     for k in K.KPIS:
-        ws.append([k, d["values"].get(k), d["targets"].get(k), d["per"].get(k)])
-    ws.column_dimensions["A"].width = 22
+        st = d["per"].get(k)
+        ws.append([t("kpi." + k), d["values"].get(k), d["targets"].get(k), t("obj." + st) if st else ""])
+    xl.widths(ws, 34, 12, 12, 16)
     if d.get("institutes"):
-        ws2 = wb.create_sheet("Instituts")
-        ws2.append(["Code", "Institut", "Statut objectifs", "Rapport"] + K.KPIS)
-        for c in ws2[1]:
-            c.font, c.fill = hdr, fill
+        ws2 = xl.sheet(wb, t("nav.institutes"))
+        ws2.append(["Code", t("xl.institute"), t("xl.status"), t("nav.reports")] + [t("kpi." + k) for k in K.KPIS])
+        xl.header(ws2)
         for i in d["institutes"]:
-            ws2.append([i["code"], i["fr"], i["status"], i["report"]] + [i["values"].get(k) for k in K.KPIS])
+            ws2.append([i["code"], i.get(lang) or i["fr"], t("obj." + i["status"]) if i.get("status") else "",
+                        i["report"]] + [i["values"].get(k) for k in K.KPIS])
     if d.get("sessions"):
-        ws3 = wb.create_sheet("Sessions")
-        ws3.append(["Session", "Statut", "Groupes", "Inscrits", "Abandons", "Attestations", "NESDA", "Enseignants"])
-        for c in ws3[1]:
-            c.font, c.fill = hdr, fill
+        ws3 = xl.sheet(wb, t("nav.sessions"))
+        ws3.append([t("xl.session"), t("xl.status"), t("kpi.groups"), t("xl.enrolled"), t("kpi.dropouts"),
+                    t("kpi.certificates"), "NESDA", t("kpi.teachers")])
+        xl.header(ws3)
         for s in d["sessions"]:
-            ws3.append([s["title"], s["status"], s["groups"], s["confirmed"], s["dropouts"], s["certificates"],
-                        s["nesda"], s["teachers"]])
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return send_file(buf, as_attachment=True, download_name=f"rapport-{r.level}-{r.year}-S{r.semester}.xlsx",
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            ws3.append([s["title"], t("sess.st." + s["status"]) if s.get("status") else "", s["groups"],
+                        s["confirmed"], s["dropouts"], s["certificates"], s["nesda"], s["teachers"]])
+    return xl.send(wb, f"rapport-{r.level}-{r.year}-S{r.semester}.xlsx")

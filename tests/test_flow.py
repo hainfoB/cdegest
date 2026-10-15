@@ -252,3 +252,67 @@ def test_candidature_four_steps_then_orientation(app, client, tpl):
     assert c.status == "orientee" and c.enrollment.session_id == s.id and c.enrollment.status == "confirmed"
     assert "Informatique" == c.enrollment.participant.specialty
     assert pub.get(f"/candidature/{c.ref}").status_code == 200
+
+
+def _xlsx(rows):
+    import io
+    from openpyxl import Workbook
+    wb = Workbook()
+    for r in rows:
+        wb.active.append(r)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
+
+
+def test_import_fp_excel(app, client):
+    from app.models import Candidature
+    inst = Institute.query.filter_by(code="INSFP-BBA-01").first()
+    f = _xlsx([["الاسم", "اللقب", "رقم الهاتف", "الولاية", "التخصص", "أرغب في التكوين من أجل إنشاء مؤسسة عن قريب"],
+               ["Lina", "Saidi", 550123456, "34", "Informatique", "نعم"],
+               ["Amine", "", "0661000000", "34", "Froid", "لا"],
+               ["Sara", "Hamidi", "0770 11 22 33", "Bordj Bou Arréridj", "Hôtellerie", "لا"]])
+    login(client, RESP)
+    r = client.post("/candidatures/import", data={"i": inst.id, "file": (f, "inscrits.xlsx")},
+                    content_type="multipart/form-data")
+    page = r.get_data(as_text=True)
+    assert r.status_code == 200 and "Saidi" in page and "0550123456" in page
+    import html
+    import re
+    payload = html.unescape(re.search(r'<textarea name="payload" hidden>(.*?)</textarea>', page, re.S).group(1))
+    client.post("/candidatures/import", data={"i": inst.id, "confirm": "1", "payload": payload})
+    cs = Candidature.query.order_by(Candidature.id).all()
+    assert [c.last_name for c in cs] == ["Saidi", "Hamidi"], "the incomplete row is skipped"
+    assert cs[0].profile == "creation" and cs[0].source == "excel" and cs[0].institute_id == inst.id
+    # second import of the same file: nothing new
+    client.post("/candidatures/import", data={"i": inst.id, "confirm": "1", "payload": payload})
+    assert Candidature.query.count() == 2
+
+
+def test_fp_api_transfer(app):
+    from app.models import Candidature
+    c = app.test_client()
+    row = [{"cde": "INSFP-BBA-01", "last_name": "Kaci", "first_name": "Imane", "phone": "0550999888"}]
+    assert c.post("/api/fp/candidatures", json=row).status_code == 404, "closed while no key is configured"
+    app.config["FP_API_KEY"] = "k" * 32
+    assert c.post("/api/fp/candidatures", json=row, headers={"X-Api-Key": "bad"}).status_code == 401
+    r = c.post("/api/fp/candidatures", json=row, headers={"X-Api-Key": "k" * 32})
+    assert r.get_json() == {"INSFP-BBA-01": 1} and Candidature.query.one().source == "api"
+
+
+def test_objectives_excel_roundtrip(app, client):
+    from app.models import Objective
+    from openpyxl import load_workbook
+    import io
+    login(client, "mfep@cdegest.dz")
+    r = client.get("/objectifs/national.xlsx?y=2026-2027")
+    rows = list(load_workbook(io.BytesIO(r.data)).active.iter_rows(values_only=True))
+    assert len(rows) == 1 + 69 * 15
+    new = [rows[0]] + [list(x[:4]) + [10, 12, 22] for x in rows[1:] if x[2] == "groups"]
+    client.post("/objectifs/import", data={"y": "2026-2027", "file": (_xlsx(new), "o.xlsx")},
+                content_type="multipart/form-data")
+    assert Objective.query.filter_by(year="2026-2027", kpi="groups").count() == 69 * 3
+    client.post("/logout")
+    login(client, RESP)
+    assert client.post("/objectifs/import", data={"y": "2026-2027"}).status_code == 403

@@ -1,0 +1,33 @@
+{% extends "app.html" %}
+{% block title %}{{ t('imp.title') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><p><a href="{{ url_for('.index') }}">{{ back }} {{ t('nav.candidatures') }}</a></p>
+  <h1>{{ t('imp.title') }}</h1><p>{{ t('imp.hint') }}</p></div>
+  <a class="btn btn-line btn-sm" href="{{ url_for('.template') }}">{{ t('imp.template') }}</a></div>
+{% if rows is none %}
+<form method="post" enctype="multipart/form-data" class="panel form" style="max-width:720px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="ci">{{ t('imp.cde') }}</label>
+    <select class="input" id="ci" name="i" required>{% if insts|length > 1 %}<option value="">—</option>{% endif %}{% for i in insts %}<option value="{{ i.id }}" {{ 'selected' if inst and i.id == inst.id }}>{{ i.code }} · {{ i.name(lang) }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="fi">{{ t('imp.file') }}</label><input class="input" id="fi" type="file" name="file" accept=".xlsx,.xlsm" required></div>
+  <p class="muted"><small>{{ t('imp.columns') }}</small></p>
+  <button class="btn btn-cde">{{ t('imp.preview') }}</button>
+</form>
+<div class="panel" style="max-width:720px;margin-top:16px"><h2>{{ t('imp.later') }}</h2><p class="muted">{{ t('imp.later_hint') }}</p></div>
+{% else %}
+<div class="minicards" style="margin-bottom:16px">
+  <div class="mc"><small>{{ t('imp.read') }}</small><span class="big-n">{{ rows|length }}</span></div>
+  <div class="mc today"><small>{{ t('imp.to_import') }}</small><span class="big-n">{{ ok|length }}</span></div>
+  <div class="mc"><small>{{ t('imp.dups') }}</small><span class="big-n">{{ rows|selectattr('dup')|list|length }}</span></div>
+  <div class="mc"><small>{{ t('imp.errors') }}</small><span class="big-n">{{ rows|selectattr('errors')|list|length }}</span></div>
+</div>
+<p class="muted"><small>{{ fname }} · {{ inst.name(lang) }} · {{ t('imp.recognised') }} : {{ cols|length }} {{ t('imp.cols') }}{% if not has_q %} · {{ t('imp.no_q') }}{% endif %}</small></p>
+<div class="panel"><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('imp.line') }}</th><th>{{ t('users.name') }}</th><th>{{ t('pub.phone') }}</th><th>{{ t('pub.specialty') }}</th><th>{{ t('apply.wilaya') }}</th><th></th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.line }}</td><td><b>{{ r.last_name }} {{ r.first_name }}</b></td><td dir="ltr" style="text-align:start">{{ r.phone }}</td><td><small>{{ r.specialty }}</small></td><td><small>{{ r.wilaya }}</small></td>
+  <td>{% if r.errors %}<span class="badge b-closed">{% for e in r.errors %}{{ t('imp.err.' ~ e) }}{{ ', ' if not loop.last }}{% endfor %}</span>{% elif r.dup %}<span class="badge b-draft">{{ t('imp.dup') }}</span>{% else %}<span class="badge b-open">{{ t('imp.ok') }}</span>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+<form method="post" class="row" style="margin-top:14px;gap:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="i" value="{{ inst.id }}"><input type="hidden" name="confirm" value="1">
+  <textarea name="payload" hidden>{{ payload }}</textarea>
+  <button class="btn btn-cde" {{ 'disabled' if not ok }}>{{ t('imp.confirm', n=ok|length) }}</button>
+  <a class="btn btn-line" href="{{ url_for('.import_xlsx', i=inst.id) }}">{{ t('cancel') }}</a></form></div>
+{% endif %}
+{% endblock %}

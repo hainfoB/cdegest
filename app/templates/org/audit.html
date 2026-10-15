@@ -3,6 +3,6 @@
 {% block content %}
 <div class="pagehead"><div><h1>{{ t('nav.audit') }}</h1><p>{{ t('audit.hint') }}</p></div></div>
 <div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('audit.when') }}</th><th>{{ t('audit.who') }}</th><th>{{ t('audit.action') }}</th><th>{{ t('audit.target') }}</th><th>{{ t('audit.details') }}</th></tr></thead>
-<tbody>{% for a in rows %}<tr><td>{{ a.created_at|dt }}</td><td dir="ltr" style="text-align:start">{{ a.user_label or '—' }}</td><td class="code">{{ a.action }}</td><td class="code">{{ a.target or '' }}</td><td>{{ a.details or '' }}</td></tr>{% else %}<tr><td colspan="5" class="empty">—</td></tr>{% endfor %}</tbody></table>
+<tbody>{% for a in rows %}<tr><td>{{ a.created_at|dt }}</td><td dir="ltr" style="text-align:start">{{ a.user_label or '—' }}</td><td><b>{{ t('act.' ~ a.action.split('.')[0]) }}</b><br><small class="code muted">{{ a.action }}</small></td><td class="code">{{ a.target or '' }}</td><td>{{ a.details or '' }}</td></tr>{% else %}<tr><td colspan="5" class="empty">—</td></tr>{% endfor %}</tbody></table>
 <div class="row end" style="margin-top:12px">{% if page > 1 %}<a class="btn btn-sm btn-line" href="?page={{ page - 1 }}">←</a>{% endif %}{% if has_next %}<a class="btn btn-sm btn-line" href="?page={{ page + 1 }}">→</a>{% endif %}</div></div>
 {% endblock %}

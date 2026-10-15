@@ -7,7 +7,7 @@ from markupsafe import escape
 from flask_login import current_user, login_required
 
 from ..extensions import db
-from ..i18n import t
+from ..i18n import get_lang, t
 from ..models import (AuditLog, Group, Institute, Objective, Programme, ProgrammeLine, Session, SurveyQuestion,
                       SurveyResponse, User, Wilaya, WorkshopTemplate)
 from ..security import (ADMIN, CAN_CREATE, COORD, DFEP, MFEP, NEEDS_INSTITUTE, NEEDS_WILAYA, NESDA, NESDA_DG,
@@ -438,3 +438,62 @@ def audit():
     page = max(1, _int(request.args.get("page"), 1))
     rows = q.order_by(AuditLog.created_at.desc()).offset((page - 1) * 50).limit(51).all()
     return render_template("org/audit.html", rows=rows[:50], page=page, has_next=len(rows) > 50)
+
+
+# ---------------------------------------------------------------- objectifs nationaux : échange Excel (MFEP)
+@bp.route("/objectifs/national.xlsx")
+@roles_required(ADMIN, MFEP)
+def objectives_export():
+    from ..services import xl
+    year = request.values.get("y") or Period().year
+    cur = {(o.wilaya_id, o.kpi, o.semester): o.target
+           for o in Objective.query.filter_by(year=year, institute_id=None)}
+    wb = xl.book()
+    ws = xl.sheet(wb, t("nav.objectives"), first=True)
+    ws.append([t("xl.wcode"), t("dash.table.wilaya"), t("xl.kpi_code"), t("xl.kpi"), "S1", "S2", t("xl.year")])
+    xl.header(ws)
+    lang = get_lang()
+    for w in Wilaya.query.order_by(Wilaya.code):
+        for k in K.KPIS:
+            ws.append([w.code, w.name(lang), k, t("kpi." + k)] + [cur.get((w.id, k, s)) for s in (1, 2, 0)])
+    xl.widths(ws, 8, 22, 14, 34, 9, 9, 9)
+    ws.freeze_panes = "E2"
+    return xl.send(wb, f"objectifs-{year}.xlsx")
+
+
+@bp.route("/objectifs/import", methods=["POST"])
+@roles_required(ADMIN, MFEP)
+def objectives_import():
+    from openpyxl import load_workbook
+    year = request.form.get("y") or Period().year
+    f = request.files.get("file")
+    try:
+        ws = load_workbook(f, read_only=True, data_only=True).active
+        rows = list(ws.iter_rows(min_row=2, values_only=True))
+    except Exception:
+        flash(t("imp.unreadable"), "err")
+        return redirect(url_for("org.objectives", y=year))
+    wil = {w.code: w for w in Wilaya.query}
+    existing = {(o.wilaya_id, o.kpi, o.semester): o for o in Objective.query.filter_by(year=year, institute_id=None)}
+    n = 0
+    for r in rows:
+        if not r or len(r) < 7:
+            continue
+        w = wil.get(str(r[0] or "").strip().zfill(2))
+        k = str(r[2] or "").strip()
+        if not w or k not in K.KPIS:
+            continue
+        for sem, v in zip((1, 2, 0), r[4:7]):
+            val = _float(str(v).replace(",", ".")) if v not in (None, "") else None
+            o = existing.get((w.id, k, sem))
+            if val is None:
+                continue
+            if o is None:
+                o = Objective(year=year, semester=sem, wilaya_id=w.id, kpi=k)
+                db.session.add(o)
+            o.target, o.set_by_id = val, current_user.id
+            n += 1
+    AuditLog.log("objectives.import", target="national", details=f"{year}: {n} cible(s)")
+    db.session.commit()
+    flash(t("obj.imported", n=n), "ok")
+    return redirect(url_for("org.objectives", y=year))

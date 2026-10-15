@@ -425,30 +425,22 @@ def certificates(sid):
 @bp.route("/sessions/<int:sid>/export.xlsx")
 @login_required
 def export(sid):
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
+    from ..services import xl
     s = get_session(sid)
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Participants"
-    head = ["Groupe", "Nom", "Prénom", "Sexe", "Téléphone", "Statut", "Présences", "Séances", "Assiduité %",
-            "Abandon", "Éligible", "N° attestation", "Suite NESDA"]
-    ws.append(head)
-    for c in ws[1]:
-        c.font = Font(bold=True, color="FFFFFF")
-        c.fill = PatternFill("solid", fgColor="0D1B2A")
+    wb = xl.book()
+    ws = xl.sheet(wb, t("xl.participants"), first=True)
+    ws.append([t(k) for k in ("xl.group", "pub.last_name", "pub.first_name", "pub.sex", "pub.phone", "enr.status",
+                              "xl.present", "xl.slots", "kpi.attendance", "xl.dropout", "xl.eligible", "xl.cert_no",
+                              "nesda.status")])
+    xl.header(ws)
     for e in sorted(s.enrollments, key=lambda e: (e.group.name if e.group else "~", e.participant.last_name)):
         st = T.enrollment_stats(e)
         p = e.participant
-        ws.append([e.group.name if e.group else "", p.last_name, p.first_name, p.sex or "", p.phone or "", e.status,
-                   st["present"], st["expected"], st["rate"], e.dropout_reason or "",
-                   "oui" if T.eligible(e, st) else "non", e.cert_no or "", p.nesda_status])
-    for col, w in zip("ABCDEFGHIJKLM", (8, 20, 18, 6, 14, 11, 10, 9, 11, 13, 9, 20, 12)):
-        ws.column_dimensions[col].width = w
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
+        ws.append([e.group.name if e.group else "", p.last_name, p.first_name, t("sex." + p.sex) if p.sex else "",
+                   p.phone or "", t("enr.st." + e.status), st["present"], st["expected"], st["rate"],
+                   t("drop." + e.dropout_reason) if e.dropout_reason else "",
+                   t("yes") if T.eligible(e, st) else t("no"), e.cert_no or "", t("ns." + p.nesda_status)])
+    xl.widths(ws, 8, 20, 18, 8, 14, 13, 10, 9, 11, 13, 9, 20, 14)
     AuditLog.log("session.export", target=f"session:{s.id}")
     db.session.commit()
-    return send_file(buf, as_attachment=True, download_name=f"session-{s.id}.xlsx",
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    return xl.send(wb, f"session-{s.id}.xlsx")

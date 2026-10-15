@@ -297,3 +297,35 @@ def _save_candidature(data, inst):
 def candidature(ref):
     c = Candidature.query.filter_by(ref=ref).first_or_404()
     return render_template("public/candidature.html", c=c)
+
+
+@bp.route("/api/fp/candidatures", methods=["POST"])
+@csrf.exempt
+def api_fp_candidatures():
+    """Transfert depuis fp.cde.dz (bouton « Transférer ») : liste JSON d'inscrits, clé dans l'en-tête X-Api-Key.
+    Mêmes champs que l'import Excel, plus « cde » (code de l'institut, ex. INSFP-BBA-01)."""
+    import hmac
+    from flask import current_app
+    key = current_app.config.get("FP_API_KEY")
+    if not key:
+        abort(404)
+    if not hmac.compare_digest(request.headers.get("X-Api-Key", ""), key):
+        abort(401)
+    from ..blueprints.candidatures import _import
+    rows = request.get_json(silent=True) or []
+    if not isinstance(rows, list):
+        abort(400)
+    out = {}
+    for code in {str(r.get("cde", "")) for r in rows if isinstance(r, dict)}:
+        inst = Institute.query.filter_by(code=code).first()
+        if not inst:
+            out[code] = "unknown"
+            continue
+        part = []
+        for r in rows:
+            if isinstance(r, dict) and str(r.get("cde")) == code:
+                phone = "".join(ch for ch in str(r.get("phone", "")) if ch.isdigit() or ch == "+")[:20]
+                r = dict(r, phone=phone, errors=[] if (r.get("last_name") and r.get("first_name") and len(phone) >= 9) else ["x"])
+                part.append(r)
+        out[code] = _import(part, inst, source="api")
+    return jsonify(out)

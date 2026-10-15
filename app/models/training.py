@@ -374,6 +374,7 @@ class Candidature(db.Model):
     consent_at = db.Column(db.DateTime)
     # nouvelle | retenue | orientee | refusee
     status = db.Column(db.String(10), default="nouvelle", index=True)
+    source = db.Column(db.String(12), default="cdegest")   # cdegest | excel | api (fp.cde.dz)
     note = db.Column(db.String(500))
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     reviewed_at = db.Column(db.DateTime)

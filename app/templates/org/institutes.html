@@ -4,7 +4,7 @@
 <div class="pagehead"><div><h1>{{ t('nav.institutes') }}</h1><p>{{ scope_label }} · {{ insts|length }}</p></div></div>
 <div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('dash.table.wilaya') }}</th><th>{{ t('inst.opened') }}</th><th>{{ t('nav.sessions') }}</th><th>{{ t('dash.scope.accounts') }}</th><th></th></tr></thead>
 <tbody>{% for i in insts %}<tr class="{{ 'dim' if not i.active }}"><td class="code">{{ i.code }}</td><td><b>{{ i.name(lang) }}</b><br><small class="muted">{{ i.address or '' }}</small></td><td>{{ i.wilaya.name(lang) }}</td><td>{{ i.cde_opened_on|d }}</td><td class="num">{{ counts[i.id] }}</td><td class="num">{{ staff[i.id] }}</td>
-<td class="actions">{% if can_edit %}<a class="btn btn-sm btn-line" href="{{ url_for('org.institutes', edit=i.id) }}#f">{{ t('edit') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<td class="actions">{% if current_user.role in ('admin','dfep','coord') and i.active %}<a class="btn btn-sm btn-cde" href="{{ url_for('candidatures.import_xlsx', i=i.id) }}">{{ t('imp.button') }}</a> {% endif %}{% if can_edit %}<a class="btn btn-sm btn-line" href="{{ url_for('org.institutes', edit=i.id) }}#f">{{ t('edit') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
 {% if can_edit %}
 <form class="panel form" method="post" id="f" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <h2>{{ t('edit') if edit else t('inst.add') }}</h2><input type="hidden" name="id" value="{{ edit.id if edit }}">

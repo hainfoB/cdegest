@@ -22,6 +22,8 @@ class Config:
     # Show clickable accounts on the login page (never in production)
     SHOW_DEMO_ACCOUNTS = os.environ.get("SHOW_DEMO_ACCOUNTS", "0") == "1"
     # Validation NESDA de la présence : 1 = la DG NESDA valide après le représentant de wilaya
+    # clé partagée avec fp.cde.dz pour le transfert automatique des inscriptions (vide = API fermée)
+    FP_API_KEY = os.environ.get("FP_API_KEY", "")
     NESDA_DG_VALIDATION = os.environ.get("NESDA_DG_VALIDATION", "0") == "1"
     PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://fp.cde.dz")
     DEFAULT_LANG = "ar"
