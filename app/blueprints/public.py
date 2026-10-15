@@ -198,3 +198,102 @@ def embed():
     g.allow_frame = True
     rows = Session.query.filter_by(status="open").order_by(Session.starts_on).limit(12).all()
     return render_template("public/embed.html", rows=rows)
+
+
+# ------------------------------------------------------------- inscription en 4 étapes (modèle fp.cde.dz)
+from flask import session as fsession  # noqa: E402
+
+from ..models import Candidature, READINESS_Q  # noqa: E402
+
+SECTORS = ("agri", "artisanat", "btp", "commerce", "industrie", "numerique", "services", "tourisme", "autre")
+
+
+@bp.route("/inscription", methods=["GET", "POST"])
+@bp.route("/inscription/<int:step>", methods=["GET", "POST"])
+def apply(step=1):
+    data = fsession.get("cand", {})
+    step = max(1, min(4, step))
+    if step > 1 and not data.get("s1"):
+        return redirect(url_for("public.apply", step=1))
+    error = None
+    if request.method == "POST":
+        f = request.form
+        if step == 1:
+            if any(f.get(k) not in ("0", "1") for k in READINESS_Q):
+                error = t("form.missing")
+            else:
+                data["s1"] = {k: f[k] for k in READINESS_Q}
+        elif step == 2:
+            if not (f.get("last_name") and f.get("first_name") and f.get("phone") and f.get("wilaya")):
+                error = t("form.missing")
+            else:
+                data["s2"] = {k: (f.get(k) or "").strip()[:150] for k in
+                              ("last_name", "first_name", "sex", "birth_date", "phone", "email", "wilaya")}
+        elif step == 3:
+            if not f.get("specialty"):
+                error = t("form.missing")
+            else:
+                data["s3"] = {k: (f.get(k) or "").strip()[:1000] for k in
+                              ("pstatus", "origin", "specialty", "diploma_year", "idea", "sector")}
+        else:
+            inst = db.session.get(Institute, f.get("institute", type=int) or 0)
+            if not inst or not f.get("consent"):
+                error = t("form.missing")
+            elif _limited("apply", 10):
+                error = t("login.blocked")
+            else:
+                c = _save_candidature(data, inst)
+                fsession.pop("cand", None)
+                return redirect(url_for("public.candidature", ref=c.ref))
+        fsession["cand"] = data
+        if not error and step < 4:
+            return redirect(url_for("public.apply", step=step + 1))
+    ctx = {}
+    wcode = (data.get("s2") or {}).get("wilaya")
+    w = Wilaya.query.filter_by(code=wcode).first() if wcode else None
+    if step == 2:
+        ctx["wilayas"] = Wilaya.query.order_by(Wilaya.code).all()
+    if step == 3:
+        ctx["origins"] = Institute.query.filter_by(wilaya_id=w.id).order_by(Institute.code).all() if w else []
+        ctx["sectors"] = SECTORS
+    if step == 4:
+        ctx["cdes"] = (Institute.query.filter_by(wilaya_id=w.id, active=True).order_by(Institute.code).all()
+                       if w else [])
+        ctx["wil"] = w
+        ctx["profile"] = Candidature(answers=_answers(data)).profile
+    return render_template("public/apply.html", step=step, data=data, error=error, q=READINESS_Q, **ctx)
+
+
+def _answers(data):
+    return ",".join(f"{k}={v}" for k, v in (data.get("s1") or {}).items())
+
+
+def _save_candidature(data, inst):
+    s2, s3 = data.get("s2", {}), data.get("s3", {})
+    w = Wilaya.query.filter_by(code=s2.get("wilaya")).first()
+    phone = "".join(ch for ch in s2.get("phone", "") if ch.isdigit() or ch == "+")[:20]
+    try:
+        year = int(s3.get("diploma_year") or 0) or None
+    except ValueError:
+        year = None
+    origin = db.session.get(Institute, int(s3["origin"])) if (s3.get("origin") or "").isdigit() else None
+    c = Candidature(answers=_answers(data), last_name=s2.get("last_name", "")[:80],
+                    first_name=s2.get("first_name", "")[:80], sex=s2.get("sex") if s2.get("sex") in ("F", "M") else None,
+                    birth_date=_date(s2.get("birth_date")), phone=phone, email=s2.get("email") or None,
+                    wilaya_id=w.id if w else inst.wilaya_id,
+                    pstatus="stagiaire" if s3.get("pstatus") == "stagiaire" else "diplome",
+                    origin_institute_id=origin.id if origin else None, specialty=s3.get("specialty", "")[:120],
+                    diploma_year=year, idea=s3.get("idea") or None,
+                    sector=s3.get("sector") if s3.get("sector") in SECTORS else None,
+                    institute_id=inst.id, consent_at=utcnow())
+    db.session.add(c)
+    db.session.flush()
+    AuditLog.log("candidature.new", target=f"candidature:{c.id}")
+    db.session.commit()
+    return c
+
+
+@bp.route("/candidature/<ref>")
+def candidature(ref):
+    c = Candidature.query.filter_by(ref=ref).first_or_404()
+    return render_template("public/candidature.html", c=c)

@@ -50,6 +50,7 @@ NAV = [
     ("main.dashboard", "grid", "nav.dashboard", ALL),
     ("main.compare", "columns", "nav.compare", {ADMIN, MFEP}),
     ("sessions.my_slots", "qr", "nav.myslots", {TEACHER}),
+    ("candidatures.index", "user-check", "nav.candidatures", {ADMIN, DFEP, COORD, RESP}),
     ("sessions.index", "layers", "nav.sessions", {ADMIN, DFEP, COORD, RESP, TEACHER}),
     ("nesda.queue", "check", "nav.nesda_queue", {ADMIN, NESDA, NESDA_DG}),
     ("nesda.participants", "thumb", "nav.nesda_people", {ADMIN, NESDA, NESDA_DG, RESP, COORD, DFEP}),

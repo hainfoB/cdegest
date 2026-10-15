@@ -456,7 +456,35 @@ def seed_demo(today=None):
             db.session.add(Report(level="wilaya", wilaya_id=w.id, year=prev_label, semester=sem, status="transmitted",
                                   snapshot=json.dumps(_snapshot_wilaya(w, per)), generated_at=when + timedelta(days=5),
                                   transmitted_by_id=dfep.id if dfep else None, transmitted_at=when + timedelta(days=5)))
+
+    # ---------------- candidatures (formulaire en 4 étapes, modèle fp.cde.dz)
+    from .models import Candidature, READINESS_Q
+    IDEAS = ["Atelier de réparation de téléphones", "Pâtisserie traditionnelle", "Serre de légumes hors-sol",
+             "Agence de développement web", "Menuiserie aluminium", "Élevage avicole", None, None]
+    SECT = ["numerique", "artisanat", "agri", "numerique", "btp", "agri", "services", "commerce"]
+    n_c = 0
+    for wcode in ("34", "19", "28"):
+        for i in insts_by_w.get(wcode, [])[:3]:
+            n = 14 if i.code.endswith("01") and wcode == "34" else 6
+            for k in range(n):
+                sex = R.choice("FM")
+                lvl = R.choice([0, 1, 1, 2, 2, 3])
+                ans = {"discover": int(lvl == 0), "skills": int(lvl >= 1), "create_soon": int(lvl >= 2),
+                       "project_ready": int(lvl == 3), "business": int(R.random() < .8), "initiative": int(R.random() < .85)}
+                j = R.randrange(len(IDEAS))
+                st = R.choice(["nouvelle"] * 5 + ["retenue"] * 2 + ["refusee"])
+                c = Candidature(answers=",".join(f"{q}={ans[q]}" for q in READINESS_Q),
+                                first_name=R.choice(F_FIRST if sex == "F" else M_FIRST), last_name=R.choice(LAST),
+                                sex=sex, birth_date=date(R.randint(1996, 2006), R.randint(1, 12), R.randint(1, 28)),
+                                phone=_phone(), wilaya_id=wil[wcode].id, pstatus=R.choice(["diplome", "diplome", "stagiaire"]),
+                                origin_institute_id=i.id, specialty=R.choice(SPECIALTIES),
+                                diploma_year=R.choice([2023, 2024, 2025, 2026]), idea=IDEAS[j] if lvl >= 2 else None,
+                                sector=SECT[j], institute_id=i.id, consent_at=datetime.combine(today, time(9)),
+                                status=st, note="Hors public cible (ni stagiaire ni diplômé de la FP)" if st == "refusee" else None,
+                                created_at=datetime.combine(today - timedelta(days=R.randint(0, 20)), time(R.randint(8, 21), R.randint(0, 59))))
+                db.session.add(c)
+                n_c += 1
     db.session.commit()
     n_att = Attendance.query.count()
     return (f"seed-demo: {counter} sessions, {len(people)} participants, {n_att} présences, "
-            f"{Objective.query.count()} objectifs, {Report.query.count()} rapports (données fictives)")
+            f"{Objective.query.count()} objectifs, {Report.query.count()} rapports, {n_c} candidatures (données fictives)")

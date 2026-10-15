@@ -1,0 +1,29 @@
+{% extends "app.html" %}
+{% block title %}{{ c.full_name }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><p><a href="{{ url_for('.index') }}">{{ back }} {{ t('nav.candidatures') }}</a></p>
+  <h1>{{ c.full_name }} <small class="muted">n° {{ '%06d'|format(c.id) }}</small></h1>
+  <p><span class="badge b-{{ 'open' if c.status in ('retenue','orientee') else ('closed' if c.status=='refusee' else 'draft') }}">{{ t('cand.' ~ c.status) }}</span> · {{ t('cand.received') }} {{ c.created_at|d }} · {{ c.institute.name(lang) }}</p></div></div>
+<div class="grid2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px">
+<div class="panel"><h2>{{ t('apply.s1') }}</h2>
+  <p><span class="badge b-open">{{ t('apply.profile') }} : {{ t('profile.' ~ c.profile) }}</span></p>
+  {% for k, v in c.readiness.items() %}<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #e6ecf0"><small style="white-space:normal">{{ t('ready.' ~ k) }}</small><b style="flex:none;color:{{ '#0a8f75' if v else '#8a96a3' }}">{{ t('yes') if v else t('no') }}</b></div>{% endfor %}</div>
+<div class="panel"><h2>{{ t('apply.s2') }} · {{ t('apply.s3') }}</h2>
+<div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('pub.phone') }}</small><div style="overflow-wrap:anywhere"><b>{{ c.phone }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('login.email') }}</small><div style="overflow-wrap:anywhere"><b>{{ c.email or '—' }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('pub.sex') }} · {{ t('pub.birth') }}</small><div style="overflow-wrap:anywhere"><b>{{ t('sex.' ~ c.sex) if c.sex else '—' }} · {{ c.birth_date|d if c.birth_date else '—' }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('apply.wilaya') }}</small><div style="overflow-wrap:anywhere"><b>{{ c.wilaya.code }} · {{ c.wilaya.name(lang) }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('pub.pstatus') }}</small><div style="overflow-wrap:anywhere"><b>{{ t('pstatus.' ~ c.pstatus) }}{% if c.diploma_year %} · {{ c.diploma_year }}{% endif %}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('apply.origin') }}</small><div style="overflow-wrap:anywhere"><b>{{ c.origin_institute.name(lang) if c.origin_institute else '—' }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('pub.specialty') }}</small><div style="overflow-wrap:anywhere"><b>{{ c.specialty }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('apply.sector') }}</small><div style="overflow-wrap:anywhere"><b>{{ t('sector.' ~ c.sector) if c.sector else '—' }}</b></div></div><div style="padding:8px 0;border-bottom:1px solid #e6ecf0"><small class="muted">{{ t('apply.idea') }}</small><div style="overflow-wrap:anywhere"><b>{{ c.idea or '—' }}</b></div></div></div>
+<div class="panel"><h2>{{ t('cand.decision') }}</h2>
+{% if c.status in ('nouvelle','retenue') %}
+  {% if c.status == 'nouvelle' %}<form method="post" style="margin-bottom:14px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-line" name="action" value="retain">{{ t('cand.do_retain') }}</button></form>{% endif %}
+  <form method="post" class="form" style="margin-bottom:14px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="ss">{{ t('cand.orient_to') }}</label><select class="input" id="ss" name="session" required>{% for s in sessions %}<option value="{{ s.id }}">{{ s.title }} · {{ s.starts_on|d }}</option>{% else %}<option value="">{{ t('cand.no_session') }}</option>{% endfor %}</select></div>
+    <button class="btn btn-cde" name="action" value="orient" {{ 'disabled' if not sessions }}>{{ t('cand.do_orient') }}</button></form>
+  <form method="post" class="form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="nt">{{ t('cand.reason') }}</label><input class="input" id="nt" name="note" placeholder="{{ t('cand.reason_ph') }}"></div>
+    <button class="btn btn-line" name="action" value="reject">{{ t('cand.do_reject') }}</button></form>
+{% else %}
+  <p>{{ t('cand.' ~ c.status ~ '.pub') }}</p>
+  {% if c.note %}<p><b>{{ t('cand.reason') }} :</b> {{ c.note }}</p>{% endif %}
+  {% if c.enrollment %}<p><a class="btn btn-line" style="white-space:normal;text-align:start" href="{{ url_for('sessions.view', sid=c.enrollment.session_id) }}">{{ c.enrollment.session.title }} {{ arr }}</a> <span class="badge b-open">{{ t('enr.st.' ~ c.enrollment.status) }}</span></p>{% endif %}
+  <p class="muted"><small>{{ c.reviewed_at|d }}</small></p>
+{% endif %}
+</div></div>
+{% endblock %}

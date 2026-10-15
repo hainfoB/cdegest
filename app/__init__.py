@@ -36,7 +36,8 @@ def create_app(config_class=Config):
     from .blueprints.public import bp as public_bp
     from .blueprints.reports import bp as reports_bp
     from .blueprints.sessions import bp as sessions_bp
-    for b in (auth_bp, main_bp, org_bp, sessions_bp, nesda_bp, public_bp, reports_bp):
+    from .blueprints.candidatures import bp as cand_bp
+    for b in (auth_bp, main_bp, org_bp, sessions_bp, nesda_bp, public_bp, reports_bp, cand_bp):
         app.register_blueprint(b)
 
     from .cli import register_cli

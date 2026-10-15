@@ -1,0 +1,13 @@
+{% extends "public/_layout.html" %}
+{% block title %}{{ t('apply.my') }}{% endblock %}
+{% block pub %}
+<div class="panel" style="max-width:640px;margin:0 auto">
+  <span class="badge b-{{ 'open' if c.status in ('retenue','orientee') else ('closed' if c.status == 'refusee' else 'draft') }}">{{ t('cand.' ~ c.status) }}</span>
+  <h1 style="margin:10px 0 4px">{{ t('apply.my') }} n° {{ '%06d'|format(c.id) }}</h1>
+  <p class="muted">{{ c.full_name }} · {{ c.institute.name(lang) }} · {{ c.created_at|d }}</p>
+  <p>{{ t('cand.' ~ c.status ~ '.pub') }}</p>
+  {% if c.status == 'refusee' and c.note %}<p><b>{{ t('cand.reason') }} :</b> {{ c.note }}</p>{% endif %}
+  {% if c.enrollment %}<a class="btn btn-cde" href="{{ url_for('public.ticket', token=c.enrollment.token) }}">{{ t('pub.ticket') }} {{ arr }}</a>{% endif %}
+  <p class="muted" style="margin-top:16px"><small>{{ t('apply.keep_link') }}</small></p>
+</div>
+{% endblock %}

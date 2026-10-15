@@ -219,3 +219,36 @@ def test_teacher_absence_cancels_slot(app, client, tpl):
     client.post("/logout")
     login(client, TEACH)
     assert client.post(f"/appel/{slot.id}", data={}).status_code == 403, "no roll call on a cancelled slot"
+
+
+def test_candidature_four_steps_then_orientation(app, client, tpl):
+    from app.models import Candidature
+    s = _session_with_today_slot(client, tpl)
+    pub = app.test_client()
+    assert pub.get("/inscription/3").status_code == 302, "cannot skip step 1"
+    yes = {"discover": "0", "skills": "1", "create_soon": "1", "project_ready": "0", "business": "1", "initiative": "1"}
+    assert pub.post("/inscription/1", data=yes).headers["Location"].endswith("/inscription/2")
+    pub.post("/inscription/2", data={"last_name": "Saidi", "first_name": "Lina", "phone": "0550 12 34 56", "wilaya": "34"})
+    pub.post("/inscription/3", data={"pstatus": "diplome", "specialty": "Informatique", "idea": "Agence web",
+                                     "sector": "numerique"})
+    page = pub.get("/inscription/4").get_data(as_text=True)
+    assert "إنشاء قريب" in page
+    r = pub.post("/inscription/4", data={"institute": s.institute_id, "consent": "1"})
+    assert r.status_code == 302 and "/candidature/" in r.headers["Location"]
+    c = Candidature.query.one()
+    assert c.profile == "creation" and c.phone == "0550123456" and c.status == "nouvelle"
+    # back office: the CDE of the institute sees it, a teacher does not
+    client.post("/logout")
+    login(client, TEACH)
+    assert client.get("/candidatures/").status_code == 403
+    client.post("/logout")
+    login(client, RESP)
+    assert "Saidi" in client.get("/candidatures/").get_data(as_text=True)
+    assert client.post(f"/candidatures/{c.id}", data={"action": "reject"}).status_code == 302
+    db.session.refresh(c)
+    assert c.status == "nouvelle", "a rejection needs a reason"
+    client.post(f"/candidatures/{c.id}", data={"action": "orient", "session": s.id})
+    db.session.refresh(c)
+    assert c.status == "orientee" and c.enrollment.session_id == s.id and c.enrollment.status == "confirmed"
+    assert "Informatique" == c.enrollment.participant.specialty
+    assert pub.get(f"/candidature/{c.ref}").status_code == 200

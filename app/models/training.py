@@ -345,3 +345,63 @@ class Report(db.Model):
 
     def data(self):
         return json.loads(self.snapshot or "{}")
+
+
+READINESS_Q = ("discover", "skills", "create_soon", "project_ready", "business", "initiative")
+
+
+class Candidature(db.Model):
+    """Inscription en 4 étapes, sur le modèle du formulaire de fp.cde.dz : le CDE étudie la demande
+    puis oriente le candidat vers une session (ce qui crée le participant et son inscription)."""
+    __tablename__ = "candidature"
+    id = db.Column(db.Integer, primary_key=True)
+    ref = db.Column(db.String(40), unique=True, nullable=False, default=_tok)
+    answers = db.Column(db.String(60), default="")          # ex. "discover=1,skills=0,..."
+    last_name = db.Column(db.String(80), nullable=False)
+    first_name = db.Column(db.String(80), nullable=False)
+    sex = db.Column(db.String(1))
+    birth_date = db.Column(db.Date)
+    phone = db.Column(db.String(30), index=True)
+    email = db.Column(db.String(150))
+    wilaya_id = db.Column(db.Integer, db.ForeignKey("wilaya.id"), index=True)
+    pstatus = db.Column(db.String(10), default="diplome")
+    origin_institute_id = db.Column(db.Integer, db.ForeignKey("institute.id"))
+    specialty = db.Column(db.String(120))
+    diploma_year = db.Column(db.Integer)
+    idea = db.Column(db.Text)
+    sector = db.Column(db.String(60))
+    institute_id = db.Column(db.Integer, db.ForeignKey("institute.id"), index=True)   # CDE choisi
+    consent_at = db.Column(db.DateTime)
+    # nouvelle | retenue | orientee | refusee
+    status = db.Column(db.String(10), default="nouvelle", index=True)
+    note = db.Column(db.String(500))
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    reviewed_at = db.Column(db.DateTime)
+    enrollment_id = db.Column(db.Integer, db.ForeignKey("enrollment.id"))
+    created_at = db.Column(db.DateTime, default=utcnow, index=True)
+
+    wilaya = db.relationship("Wilaya")
+    institute = db.relationship("Institute", foreign_keys=[institute_id])
+    origin_institute = db.relationship("Institute", foreign_keys=[origin_institute_id])
+    enrollment = db.relationship("Enrollment")
+
+    @property
+    def full_name(self):
+        return f"{self.last_name} {self.first_name}"
+
+    @property
+    def readiness(self):
+        d = dict(p.split("=") for p in (self.answers or "").split(",") if "=" in p)
+        return {k: d.get(k) == "1" for k in READINESS_Q}
+
+    @property
+    def profile(self):
+        """Niveau de maturité déduit de l'étape 1 : decouverte < competences < creation < projet."""
+        r = self.readiness
+        if r["project_ready"]:
+            return "projet"
+        if r["create_soon"]:
+            return "creation"
+        if r["skills"]:
+            return "competences"
+        return "decouverte"

@@ -1,0 +1,24 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.candidatures') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.candidatures') }}</h1><p>{{ t('cand.hint') }}</p></div>
+  <a class="btn btn-line btn-sm" href="{{ url_for('public.apply') }}" target="_blank">{{ t('cand.form_link') }}</a></div>
+<div class="minicards" style="margin-bottom:12px">
+  <a class="mc {{ 'today' if not st }}" href="{{ url_for('.index') }}"><small>{{ t('obj.all') }}</small><span class="big-n">{{ total }}</span></a>
+  {% for k in statuses %}<a class="mc {{ 'today' if st == k }}" href="{{ url_for('.index', st=k) }}"><small>{{ t('cand.' ~ k) }}</small><span class="big-n">{{ counts[k] }}</span></a>{% endfor %}
+</div>
+<p class="muted" style="margin:0 0 16px"><small>{{ t('apply.profile') }} : {% for p in plist %}{{ t('profile.' ~ p) }} <b>{{ profiles[p] }}</b>{{ ' · ' if not loop.last }}{% endfor %}</small></p>
+<div class="panel">
+  <form class="tools" method="get"><input type="hidden" name="st" value="{{ st or '' }}">
+    <label class="searchbox">{{ icon('search', 18) }}<input type="search" name="q" value="{{ q }}" placeholder="{{ t('nesda.search') }}" aria-label="{{ t('nesda.search') }}"></label></form>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>N°</th><th>{{ t('users.name') }}</th><th>{{ t('pub.specialty') }}</th><th>{{ t('apply.profile') }}</th><th>CDE</th><th>{{ t('cand.received') }}</th><th>{{ t('cand.status_col') }}</th></tr></thead>
+  <tbody>{% for c in rows %}<tr><td><a href="{{ url_for('.detail', cid=c.id) }}">{{ '%06d'|format(c.id) }}</a></td>
+    <td><a href="{{ url_for('.detail', cid=c.id) }}"><b>{{ c.full_name }}</b></a><br><small class="muted" dir="ltr">{{ c.phone }}</small></td>
+    <td><small>{{ c.specialty }}<br>{{ t('pstatus.' ~ c.pstatus) }}</small></td>
+    <td><span class="badge b-open">{{ t('profile.' ~ c.profile) }}</span></td>
+    <td><small>{{ c.institute.code }}</small></td><td>{{ c.created_at|d }}</td>
+    <td><span class="badge b-{{ 'open' if c.status in ('retenue','orientee') else ('closed' if c.status=='refusee' else 'draft') }}">{{ t('cand.' ~ c.status) }}</span></td></tr>
+  {% else %}<tr><td colspan="7" class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}
