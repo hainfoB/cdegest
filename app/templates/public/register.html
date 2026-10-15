@@ -1,0 +1,29 @@
+{% extends "public/_layout.html" %}
+{% block title %}{{ t('cta.register') }}{% endblock %}
+{% block pub %}
+<article class="sesscard" style="margin-bottom:18px">
+  <span class="badge b-open" style="align-self:flex-start">{{ s.institute.name(lang) }}</span>
+  <h3 style="font-size:24px">{{ s.template.title(lang) if s.template else s.title }}</h3>
+  <p class="muted">{{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }} · {{ t('mode.' ~ s.mode) }} · {{ s.location or '' }}</p>
+  {% if s.modules %}<p><b>{{ t('sess.modules') }} :</b> {{ s.modules|map(attribute='title')|join(' · ') }}</p>{% endif %}
+  {% if s.description %}<p>{{ s.description }}</p>{% endif %}
+</article>
+{% if s.status != 'open' %}<div class="flash flash-err">{{ t('pub.closed') }}</div>{% else %}
+{% if error %}<div class="flash flash-err" role="alert">{{ error }}</div>{% endif %}
+<form method="post" class="panel form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>{{ t('pub.form_title') }}</h2>
+  <div class="fgrid">
+    <div class="field"><label for="ln">{{ t('pub.last_name') }} *</label><input class="input" id="ln" name="last_name" required autocomplete="family-name"></div>
+    <div class="field"><label for="fn">{{ t('pub.first_name') }} *</label><input class="input" id="fn" name="first_name" required autocomplete="given-name"></div>
+    <div class="field"><label for="ph">{{ t('pub.phone') }} *</label><input class="input" id="ph" name="phone" required inputmode="tel" dir="ltr" placeholder="05 XX XX XX XX" autocomplete="tel"></div>
+    <div class="field"><label for="em">{{ t('login.email') }}</label><input class="input" id="em" type="email" name="email" dir="ltr" autocomplete="email"></div>
+    <div class="field"><label for="sx">{{ t('pub.sex') }}</label><select class="input" id="sx" name="sex"><option value="">—</option><option value="F">{{ t('sex.F') }}</option><option value="M">{{ t('sex.M') }}</option></select></div>
+    <div class="field"><label for="bd">{{ t('pub.birth') }}</label><input class="input" id="bd" type="date" name="birth_date"></div>
+    <div class="field"><label for="ps">{{ t('pub.pstatus') }}</label><select class="input" id="ps" name="pstatus"><option value="stagiaire">{{ t('pstatus.stagiaire') }}</option><option value="diplome">{{ t('pstatus.diplome') }}</option></select></div>
+    <div class="field"><label for="sp">{{ t('pub.specialty') }}</label><input class="input" id="sp" name="specialty"></div>
+    <div class="field"><label for="wi">{{ t('dash.table.wilaya') }}</label><select class="input" id="wi" name="wilaya">{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if w.id == s.institute.wilaya_id }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>
+  </div>
+  <label class="check"><input type="checkbox" name="consent" value="1" required> {{ t('pub.consent') }}</label>
+  <button class="btn btn-cde btn-block">{{ t('cta.register') }}</button>
+</form>{% endif %}
+{% endblock %}

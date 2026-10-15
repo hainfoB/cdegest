@@ -1,0 +1,25 @@
+{% extends "app.html" %}
+{% from "partials/ui.html" import period_bar with context %}
+{% block title %}{{ t('nav.surveys') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.surveys') }}</h1><p>{{ t('survey.hint') }}</p></div>{{ period_bar(period, years, 'org.surveys') }}</div>
+<div class="panel" style="overflow-x:auto;margin-bottom:18px"><h2>{{ t('survey.results') }}</h2>
+{% if stats %}<table class="tbl"><thead><tr><th>{{ t('sess.title') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('survey.n') }}</th>{% for q in questions if q.active %}<th title="{{ q.text(lang) }}">Q{{ q.order }}</th>{% endfor %}<th>{{ t('kpi.satisfaction') }}</th></tr></thead>
+<tbody>{% for x in stats %}<tr><td><b>{{ x.session.title }}</b></td><td class="code">{{ x.session.institute.code }}</td><td class="num">{{ x.n }}</td>{% for q in questions if q.active %}<td class="num">{{ x.avg[q.id] or '—' }}</td>{% endfor %}<td><span class="badge {{ 'b-ok' if x.sat >= 80 else ('b-wait' if x.sat >= 60 else 'b-bad') }}">{{ x.sat }} %</span></td></tr>
+{% if x.comments %}<tr><td colspan="{{ 4 + questions|length }}" style="background:var(--bg)"><small>{% for c in x.comments[:4] %}« {{ c }} »{{ ' · ' if not loop.last }}{% endfor %}</small></td></tr>{% endif %}{% endfor %}</tbody></table>
+{% else %}<p class="empty">{{ t('survey.none') }}</p>{% endif %}</div>
+<div class="panel"><h2>{{ t('survey.model') }}</h2><p class="muted" style="margin-bottom:10px">{{ t('survey.scale') }}</p>
+<table class="tbl"><tbody>{% for q in questions %}<tr class="{{ 'dim' if not q.active }}"><td class="code">Q{{ q.order }}</td><td><b>{{ q.text(lang) }}</b>{% if q.is_overall %} <span class="badge b-ink">{{ t('survey.overall') }}</span>{% endif %}</td>
+<td class="actions">{% if can_edit %}<a class="btn btn-sm btn-line" href="{{ url_for('org.surveys', edit=q.id) }}#f">{{ t('edit') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table>
+{% if can_edit %}
+<form method="post" id="f" class="form" style="margin-top:16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ edit.id if edit }}">
+  <div class="fgrid">
+    <div class="field"><label>#</label><input class="input sm" type="number" name="order" value="{{ edit.order if edit else questions|length + 1 }}"></div>
+    <div class="field full"><label>FR</label><input class="input sm" name="text_fr" value="{{ edit.text_fr if edit }}" required></div>
+    <div class="field full"><label>AR</label><input class="input sm" name="text_ar" value="{{ edit.text_ar if edit }}" required dir="rtl"></div>
+    <div class="field full"><label>EN</label><input class="input sm" name="text_en" value="{{ edit.text_en if edit }}" required dir="ltr"></div>
+    <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if not edit or edit.active }}> {{ t('active') }}</label>
+    <label class="check"><input type="checkbox" name="is_overall" value="1" {{ 'checked' if edit and edit.is_overall }}> {{ t('survey.overall') }}</label>
+  </div><div class="row end"><button class="btn btn-cde btn-sm">{{ t('save') }}</button></div></form>
+{% endif %}</div>
+{% endblock %}

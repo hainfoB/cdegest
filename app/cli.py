@@ -17,6 +17,7 @@ INSTITUTES = [
     # code, wilaya, fr, ar
     ("INSFP-BBA-01", "34", "INSFP Bordj Bou Arréridj 01", "المعهد الوطني المتخصص في التكوين المهني برج بوعريريج 01"),
     ("INSFP-BBA-02", "34", "INSFP Bordj Bou Arréridj 02", "المعهد الوطني المتخصص في التكوين المهني برج بوعريريج 02"),
+    ("INSFP-BBA-03", "34", "INSFP Ras El Oued", "المعهد الوطني المتخصص في التكوين المهني رأس الوادي"),
     ("INSFP-STF-01", "19", "INSFP Sétif 01", "المعهد الوطني المتخصص في التكوين المهني سطيف 01"),
     ("INSFP-STF-02", "19", "INSFP Sétif 02", "المعهد الوطني المتخصص في التكوين المهني سطيف 02"),
     ("INSFP-MSL-01", "28", "INSFP M'Sila 01", "المعهد الوطني المتخصص في التكوين المهني المسيلة 01"),
@@ -30,6 +31,8 @@ DEMO_USERS = [
     {"email": "coord.bba@cdegest.dz", "pwd_env": "PASSWORD_COORD_BBA", "name": "Coordinateur CDE BBA", "role": "coord", "wilaya": "34", "show": True, "scope": {'ar': 'برج بوعريريج', 'fr': 'BBA', 'en': 'BBA'}},
     {"email": "resp.insfp-bba01@cdegest.dz", "pwd_env": "PASSWORD_RESP_BBA01", "name": "Responsable CDE INSFP BBA 01", "role": "resp", "institute": "INSFP-BBA-01", "show": True, "scope": {'ar': 'المعهد BBA 01', 'fr': 'INSFP BBA 01', 'en': 'INSFP BBA 01'}},
     {"email": "formateur.bba01@cdegest.dz", "pwd_env": "PASSWORD_ENSEIGNANT_BBA01", "name": "Enseignant INSFP BBA 01", "role": "formateur", "institute": "INSFP-BBA-01", "show": True, "scope": {'ar': 'المعهد BBA 01', 'fr': 'INSFP BBA 01', 'en': 'INSFP BBA 01'}},
+    {"email": "nesda.bba@cdegest.dz", "pwd_env": "PASSWORD_NESDA_BBA", "name": "Représentant NESDA BBA", "role": "nesda", "wilaya": "34", "show": True},
+    {"email": "dg.nesda@cdegest.dz", "pwd_env": "PASSWORD_DG_NESDA", "name": "Direction générale NESDA", "role": "nesda_dg", "show": True},
     {"email": "resp.insfp-bba02@cdegest.dz", "name": "Responsable CDE INSFP BBA 02", "role": "resp", "institute": "INSFP-BBA-02", "show": False},
     {"email": "dfep.setif@cdegest.dz", "name": "DFEP Sétif", "role": "dfep", "wilaya": "19", "show": False},
     {"email": "coord.setif@cdegest.dz", "name": "Coordinateur CDE Sétif", "role": "coord", "wilaya": "19", "show": False},
@@ -85,6 +88,15 @@ def register_cli(app):
         """Wilayas, institutes and (in demo mode) demo accounts. Idempotent."""
         n = seed_base(demo=app.config["DEMO_MODE"])
         click.echo(f"seed-base: {n} élément(s) créé(s)")
+
+    @app.cli.command("seed-demo")
+    def seed_demo_cmd():
+        """Fictitious demonstration data (sessions, attendance, objectives, reports). Runs once."""
+        if not app.config["DEMO_MODE"]:
+            click.echo("seed-demo: DEMO_MODE=0, rien à faire")
+            return
+        from .demo import seed_demo
+        click.echo(seed_demo())
 
     @app.cli.command("init-local")
     def init_local_cmd():

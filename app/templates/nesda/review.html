@@ -1,0 +1,34 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import nesda_badge with context %}
+{% block title %}{{ t('nesda.review') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><p class="muted"><a href="{{ url_for('nesda.queue') }}">{{ back }} {{ t('nav.nesda_queue') }}</a></p>
+    <h1>{{ s.title }}</h1><p>{{ s.institute.name(lang) }} · {{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }} · {{ nesda_badge(s) }}</p></div>
+</div>
+{% set n_elig = elig.values()|select|list|length %}
+<div class="minicards" style="margin-bottom:20px">
+  <div class="mc"><small>{{ t('sess.enrolled') }}</small><span class="big-n">{{ enrs|length }}</span></div>
+  <div class="mc"><small>{{ t('cert.eligible') }} (≥ {{ s.min_attendance }} %)</small><span class="big-n">{{ n_elig }}</span></div>
+  <div class="mc {{ 'alert' if uncalled }}"><small>{{ t('nesda.uncalled') }}</small><span class="big-n">{{ uncalled|length }}<small style="font-size:14px;color:var(--mut)"> / {{ n_slots }}</small></span></div>
+  <div class="mc {{ 'alert' if corrections }}"><small>{{ t('nesda.corrections') }}</small><span class="big-n">{{ corrections }}</span></div>
+</div>
+<div class="panel" style="overflow-x:auto"><h2>{{ t('nesda.lists') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('pub.phone') }}</th><th>{{ t('nesda.presences') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.hours') }}</th><th>{{ t('cert.eligible') }}</th></tr></thead>
+<tbody>{% for e in enrs %}{% set st = stats[e.id] %}<tr><td><b>{{ e.participant.full_name }}</b></td><td>{{ e.group.name if e.group }}</td><td dir="ltr" style="text-align:start">{{ e.participant.phone }}</td>
+<td class="num">{{ st.present }} / {{ st.expected }}</td><td class="num">{{ st.rate ~ ' %' if st.rate is not none else '—' }}</td><td class="num">{{ (st.minutes/60)|round(1) }}</td>
+<td>{% if elig[e.id] %}<span class="badge b-ok">{{ t('yes') }}</span>{% elif e.dropout %}<span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% else %}<span class="badge b-draft">{{ t('no') }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% if s.nesda_note %}<div class="flash flash-err" style="margin-top:16px">{{ icon('info', 18) }}<span>{{ s.nesda_note }}</span></div>{% endif %}
+{% if can_act %}
+<div class="grid2" style="margin-top:18px">
+  <form method="post" class="panel" data-confirm="{{ t('nesda.confirm_validate', n=n_elig) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h2>{{ t('nesda.validate') }}</h2><p class="muted" style="margin-bottom:14px">{{ t('nesda.validate_hint', n=n_elig) }}</p>
+    <button class="btn btn-cde" name="action" value="validate">{{ icon('check', 18) }} {{ t('nesda.validate') }}</button></form>
+  <form method="post" class="panel"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h2>{{ t('nesda.reject') }}</h2>
+    <textarea class="input" name="note" required placeholder="{{ t('nesda.reject_hint') }}" aria-label="{{ t('nesda.reject_hint') }}"></textarea>
+    <div class="row end" style="margin-top:10px"><button class="btn btn-bad" name="action" value="reject">{{ t('nesda.reject') }}</button></div></form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="ltr">
+<head><meta charset="utf-8"><title>{{ t('nav.certificates') }} — {{ s.title }}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap">
+<style>
+@page{size:A4 landscape;margin:0}
+*{box-sizing:border-box}
+body{margin:0;background:#e9eef2;font-family:Poppins,Tajawal,sans-serif;color:#0D1B2A}
+.toolbar{position:sticky;top:0;background:#0D1B2A;color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;font-size:14px}
+.toolbar button{background:#07E5BB;color:#0D1B2A;border:0;border-radius:999px;padding:8px 18px;font-weight:800;cursor:pointer}
+.page{width:297mm;height:210mm;margin:12px auto;background:#fff;position:relative;overflow:hidden;page-break-after:always;padding:16mm 18mm}
+.page::before{content:"";position:absolute;inset:7mm;border:2px solid #07E5BB;border-radius:6mm}
+.page::after{content:"";position:absolute;inset:9mm;border:1px solid #0D1B2A22;border-radius:5mm}
+.top{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.top img{height:26mm}
+.rep{text-align:center;font-family:Tajawal;font-size:12.5pt;line-height:1.5}
+.rep small{display:block;font-family:Poppins;font-size:9pt;color:#5E6E80}
+h1{text-align:center;margin:8mm 0 2mm;font:800 30pt Tajawal;color:#0D1B2A}
+h2{text-align:center;margin:0 0 7mm;font:700 15pt Poppins;color:#03A586;letter-spacing:.12em;text-transform:uppercase}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14mm;position:relative;z-index:1}
+.fr{font-size:12pt;line-height:1.75}
+.ar{font-family:Tajawal;font-size:14pt;line-height:1.8;direction:rtl;text-align:right}
+.name{font:800 19pt Poppins;color:#0D1B2A;text-align:center;margin:0 0 6mm}
+.name span{display:block;font:700 17pt Tajawal}
+b{font-weight:700}
+.bottom{position:absolute;left:18mm;right:18mm;bottom:15mm;display:flex;justify-content:space-between;align-items:flex-end;z-index:1}
+.sign{width:62mm;text-align:center;font-size:9.5pt;color:#5E6E80;border-top:1px solid #0D1B2A55;padding-top:2mm}
+.qr{text-align:center;font-size:8pt;color:#5E6E80}
+.qr svg{width:28mm;height:28mm}
+.nesda{display:inline-block;background:#E6F7EF;color:#0B7A4B;border-radius:999px;padding:1mm 4mm;font-size:9pt;font-weight:700;margin-top:2mm}
+@media print{body{background:#fff}.toolbar{display:none}.page{margin:0}}
+</style></head>
+<body>
+<div class="toolbar"><span>{{ items|length }} {{ t('nav.certificates')|lower }} · {{ s.title }}</span><button onclick="window.print()">{{ t('cert.print') }}</button></div>
+{% for e, st in items %}{% set p = e.participant %}
+<section class="page">
+  <div class="top">
+    <img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE">
+    <div class="rep">الجمهورية الجزائرية الديمقراطية الشعبية<br>وزارة التكوين والتعليم المهنيين
+      <small>République Algérienne Démocratique et Populaire · Ministère de la Formation et de l'Enseignement Professionnels</small></div>
+    <div class="qr">{{ qr(url_for('public.verify', cert_no=e.cert_no, _external=True))|safe }}<br>N° {{ e.cert_no }}</div>
+  </div>
+  <h1>شهادة متابعة تكوين</h1>
+  <h2>Attestation de formation</h2>
+  <p class="name">{{ p.last_name|upper }} {{ p.first_name }}</p>
+  <div class="cols">
+    <div class="fr">Le Centre de développement de l'entrepreneuriat de l'<b>{{ s.institute.name_fr }}</b> atteste que
+      {{ 'Mme' if p.sex == 'F' else 'M.' }} <b>{{ p.last_name|upper }} {{ p.first_name }}</b> a suivi la formation
+      « <b>{{ s.title }}</b> » du {{ s.starts_on|d }} au {{ s.ends_on|d }}, soit <b>{{ (st.minutes / 60)|round(0)|int }} heures</b>
+      de formation et une assiduité de <b>{{ st.rate }} %</b>.<br>
+      <span class="nesda">✓ Présence validée par la NESDA le {{ (s.nesda_dg_at or s.nesda_w_at)|d if (s.nesda_dg_at or s.nesda_w_at) else e.cert_issued_on|d }}</span></div>
+    <div class="ar">يشهد مركز تطوير المقاولاتية التابع لـ<b>{{ s.institute.name_ar }}</b> أن
+      {{ 'السيدة' if p.sex == 'F' else 'السيد' }} <b>{{ p.last_name }} {{ p.first_name }}</b> قد تابع(ت) تكوين
+      «<b>{{ s.template.title_ar if s.template else s.title }}</b>» من {{ s.starts_on|d }} إلى {{ s.ends_on|d }}،
+      بحجم <b>{{ (st.minutes / 60)|round(0)|int }} ساعة</b> ونسبة مواظبة <b>{{ st.rate }}%</b>.<br>
+      <span class="nesda">✓ تم التحقق من الحضور من طرف NESDA</span></div>
+  </div>
+  <div class="bottom">
+    <div class="sign">Le responsable du CDE · مسؤول المركز</div>
+    <div style="text-align:center;font-size:9.5pt;color:#5E6E80">Délivrée le {{ e.cert_issued_on|d }} · {{ s.institute.wilaya.name_fr }}<br>Vérification : {{ url_for('public.verify', _external=True) }}</div>
+    <div class="sign">Le coordinateur CDE de wilaya · منسق الولاية</div>
+  </div>
+</section>
+{% else %}<p style="text-align:center;padding:40px">—</p>{% endfor %}
+</body></html>

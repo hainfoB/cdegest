@@ -1,0 +1,15 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import nesda_badge with context %}
+{% block title %}{{ t('nav.nesda_queue') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.nesda_queue') }}</h1><p>{{ t('nesda.queue_hint') }}{% if dg_required %} {{ t('nesda.dg_required') }}{% endif %}</p></div></div>
+<div class="panel" style="margin-bottom:18px"><h2>{{ t('nesda.to_review') }} <small class="muted">{{ pending|length }}</small></h2>
+{% if pending %}
+<table class="tbl"><thead><tr><th>{{ t('sess.title') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('sess.dates') }}</th><th>{{ t('sess.enrolled') }}</th><th>{{ t('nesda.submitted_on') }}</th><th>{{ t('obj.status') }}</th><th></th></tr></thead>
+<tbody>{% for s in pending %}<tr><td><b>{{ s.title }}</b></td><td>{{ s.institute.name(lang) }}</td><td>{{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }}</td><td class="num">{{ s.confirmed|length }}</td><td>{{ s.nesda_submitted_at|dt }}</td><td>{{ nesda_badge(s) }}</td>
+<td class="actions"><a class="btn btn-sm btn-cde" href="{{ url_for('nesda.review', sid=s.id) }}">{{ t('nesda.review') }}</a></td></tr>{% endfor %}</tbody></table>
+{% else %}<div class="emptybox">{{ icon('check', 48) }}<p>{{ t('nesda.nothing') }}</p></div>{% endif %}</div>
+<div class="panel"><h2>{{ t('nesda.history') }}</h2>
+<table class="tbl"><tbody>{% for s in done %}<tr><td><a href="{{ url_for('nesda.review', sid=s.id) }}">{{ s.title }}</a></td><td>{{ s.institute.code }}</td><td>{{ s.closed_at|d }}</td><td>{{ nesda_badge(s) }}</td><td class="muted">{{ (s.nesda_dg_by or s.nesda_w_by).name if (s.nesda_dg_by or s.nesda_w_by) }}</td></tr>{% else %}<tr><td class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

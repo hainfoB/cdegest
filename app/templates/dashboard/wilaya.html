@@ -1,0 +1,42 @@
+{% extends "app.html" %}
+{% from "partials/ui.html" import kpi_families, period_bar, status_pill, nesda_badge with context %}
+{% block title %}{{ t('nav.dashboard') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{{ t('dash.hello', name=current_user.name) }}</h1>
+    <p>{{ t('dash.nesda_w' if view == 'nesda' else 'dash.wilaya') }} · {{ wilaya.name(lang) }}</p>
+  </div>
+  {{ period_bar(period, years, 'main.dashboard') }}
+</div>
+
+<div class="minicards" style="margin-bottom:26px">
+  <div class="mc"><small>{{ t('obj.status') }} · {{ t('period.' ~ period.code) }}</small><span>{{ status_pill(status) }}</span></div>
+  {% if view == 'nesda' %}
+    <a class="mc {{ 'alert' if pending }}" href="{{ url_for('nesda.queue') }}"><small>{{ t('nav.nesda_queue') }}</small><b>{{ t('nesda.to_validate', n=pending|length) }}</b></a>
+    <a class="mc" href="{{ url_for('nesda.participants') }}"><small>{{ t('nav.nesda_people') }}</small><b>{{ t('nesda.update_status') }}</b></a>
+  {% else %}
+    <a class="mc {{ 'alert' if programme and programme.status == 'submitted' and current_user.role == 'dfep' }}" href="{{ url_for('org.programme', y=period.year) }}"><small>{{ t('nav.programme') }} {{ period.year }}</small>
+      <b>{{ t('prog.st.' ~ (programme.status if programme else 'none')) }}</b></a>
+    <a class="mc" href="{{ url_for('reports.index') }}"><small>{{ t('nav.reports') }}</small><b>{{ t('rep.received', n=reports_in) }}</b></a>
+    <div class="mc"><small>{{ t('nav.sessions') }}</small><b>{{ t('dash.running', n=running) }}</b></div>
+    <div class="mc {{ 'alert' if rejected }}"><small>NESDA</small><b>{{ t('nesda.pending_short', n=pending|length) }} · {{ t('nesda.rejected_short', n=rejected|length) }}</b></div>
+  {% endif %}
+</div>
+
+{% if view == 'nesda' %}
+  {{ kpi_families(families, values, targets, per, icons, only=['conversion','attendance']) }}
+{% else %}
+  {{ kpi_families(families, values, targets, per, icons) }}
+{% endif %}
+
+<div class="panel"><h2>{{ t('nat.cde') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('kpi.groups') }}</th><th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.dropout_rate') }}</th><th>{{ t('kpi.certificates') }}</th><th>{{ t('obj.status') }}</th></tr></thead>
+<tbody>{% for r in rows %}{% set v = r['values'] %}<tr><td class="code">{{ r.institute.code }}</td><td><b>{{ r.institute.name(lang) }}</b></td>
+<td class="num">{{ fmt('groups', v.groups) }}</td><td class="num">{{ fmt('trained', v.trained) }}</td><td class="num">{{ fmt('attendance', v.attendance) }}</td><td class="num">{{ fmt('dropout_rate', v.dropout_rate) }}</td><td class="num">{{ fmt('certificates', v.certificates) }}</td><td>{{ status_pill(r.status) }}</td></tr>{% endfor %}</tbody></table></div>
+
+{% if pending and view == 'nesda' %}
+<div class="panel" style="margin-top:20px"><h2>{{ t('nav.nesda_queue') }}</h2>
+<table class="tbl"><tbody>{% for s in pending %}<tr><td><a href="{{ url_for('nesda.review', sid=s.id) }}">{{ s.title }}</a></td><td>{{ s.institute.code }}</td><td>{{ s.nesda_submitted_at|dt }}</td><td>{{ nesda_badge(s) }}</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}

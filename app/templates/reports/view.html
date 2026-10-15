@@ -1,0 +1,23 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import status_pill with context %}
+{% block title %}{{ t('nav.reports') }}{% endblock %}
+{% block content %}
+{% set scope = d.institute or d.wilaya %}
+<div class="pagehead"><div>
+  <p class="muted noprint"><a href="{{ url_for('reports.index', y=r.year, p='S' ~ r.semester) }}">{{ back }} {{ t('nav.reports') }}</a></p>
+  <h1>{{ t('rep.title_inst') if r.level == 'institute' else t('rep.title_wil') }} — {{ scope[lang] if lang in ('fr','ar') else scope.fr }}</h1>
+  <p>{{ t('period.year') }} {{ r.year }} · {{ t('period.S' ~ r.semester) }} · {{ status_pill(d.status) }} · {{ t('rep.generated_on') }} {{ d.generated_at.replace('T',' ') }}</p></div>
+  <div class="row noprint"><button class="btn btn-sm btn-line" onclick="window.print()">{{ icon('file', 16) }} PDF</button><a class="btn btn-sm btn-line" href="{{ url_for('reports.export', rid=r.id) }}">Excel</a></div></div>
+{% if r.status == 'transmitted' %}<div class="flash flash-ok">{{ icon('lock', 18) }}<span>{{ t('rep.frozen', who=r.transmitted_by.name if r.transmitted_by else '—', when=r.transmitted_at|dt) }}</span></div>{% endif %}
+<div class="panel" style="margin-bottom:18px"><table class="tbl"><thead><tr><th>{{ t('cmp.indicator') }}</th><th>{{ t('rep.realised') }}</th><th>{{ t('kpi.target') }}</th><th>{{ t('obj.status') }}</th></tr></thead>
+<tbody>{% for fam, keys in families %}<tr class="famrow"><td colspan="4" style="background:var(--bg);font-weight:800">{{ t('kpi.family.' ~ fam) }}</td></tr>
+{% for k in keys %}<tr><td>{{ t('kpi.' ~ k) }}</td><td class="num"><b style="color:var(--ink)">{{ fmt(k, d['values'][k]) }}</b></td><td class="num">{{ fmt(k, d.targets.get(k)) }}</td><td>{% if d.per[k] != 'none' %}{{ status_pill(d.per[k]) }}{% endif %}</td></tr>{% endfor %}{% endfor %}</tbody></table></div>
+{% if d.institutes %}<div class="panel" style="overflow-x:auto;margin-bottom:18px"><h2>{{ t('nat.cde') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('kpi.groups') }}</th><th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.dropout_rate') }}</th><th>{{ t('obj.status') }}</th><th>{{ t('nav.reports') }}</th></tr></thead>
+<tbody>{% for i in d.institutes %}<tr><td class="code">{{ i.code }}</td><td>{{ i[lang] if lang in ('fr','ar') else i.fr }}</td><td class="num">{{ fmt('groups', i['values'].groups) }}</td><td class="num">{{ fmt('trained', i['values'].trained) }}</td><td class="num">{{ fmt('attendance', i['values'].attendance) }}</td><td class="num">{{ fmt('dropout_rate', i['values'].dropout_rate) }}</td><td>{{ status_pill(i.status) }}</td><td>{{ t('rep.st.' ~ i.report) }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if d.sessions %}<div class="panel" style="overflow-x:auto;margin-bottom:18px"><h2>{{ t('nav.sessions') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('sess.title') }}</th><th>{{ t('sess.groups') }}</th><th>{{ t('sess.enrolled') }}</th><th>{{ t('kpi.dropouts') }}</th><th>{{ t('kpi.certificates') }}</th><th>{{ t('sess.teachers') }}</th><th>NESDA</th></tr></thead>
+<tbody>{% for s in d.sessions %}<tr><td>{{ s.title }}</td><td class="num">{{ s.groups }}</td><td class="num">{{ s.confirmed }}</td><td class="num">{{ s.dropouts }}</td><td class="num">{{ s.certificates }}</td><td class="num">{{ s.teachers }}</td><td>{{ t('nesda.st.' ~ s.nesda) }}</td></tr>{% endfor %}</tbody></table></div>{% endif %}
+{% if r.comment %}<div class="panel"><h2>{{ t('rep.comment') }}</h2><p style="white-space:pre-line">{{ r.comment }}</p></div>{% endif %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.reports') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.reports') }}</h1><p>{{ t('rep.hint') }}</p></div>
+  <form class="periodbar noprint" method="get"><select name="y" onchange="this.form.submit()" aria-label="{{ t('period.year') }}">{% for y in years %}<option {{ 'selected' if y == period.year }}>{{ y }}</option>{% endfor %}</select>
+  <span class="seg">{% for c in ['S1','S2'] %}<a href="{{ url_for('reports.index', y=period.year, p=c) }}" class="{{ 'on' if period.code == c }}">{{ t('period.' ~ c) }}</a>{% endfor %}</span></form></div>
+
+{% macro rep_status(r) -%}
+{% if not r %}<span class="badge b-draft">{{ t('rep.st.none') }}</span>{% elif r.status == 'transmitted' %}<span class="badge b-ok">{{ t('rep.st.transmitted') }} · {{ r.transmitted_at|d }}</span>{% else %}<span class="badge b-wait">{{ t('rep.st.draft') }}</span>{% endif %}
+{%- endmacro %}
+
+{% if view in ('institute','wilaya') %}
+<div class="panel" style="margin-bottom:18px">
+  <div class="panelhead"><div><h2>{{ t('rep.mine_inst') if view == 'institute' else t('rep.mine_wil') }} · {{ period.year }} S{{ period.semester }}</h2><p>{{ rep_status(mine) }}</p></div>
+    {% if mine %}<div class="row"><a class="btn btn-sm btn-line" href="{{ url_for('reports.view', rid=mine.id) }}">{{ t('see') }}</a><a class="btn btn-sm btn-line" href="{{ url_for('reports.export', rid=mine.id) }}">{{ icon('file', 16) }} Excel</a></div>{% endif %}</div>
+  {% if not mine or mine.status != 'transmitted' %}
+  <form method="post" class="form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="y" value="{{ period.year }}"><input type="hidden" name="p" value="{{ period.code }}">
+    <div class="field"><label>{{ t('rep.comment') }}</label><textarea class="input" name="comment" placeholder="{{ t('rep.comment_hint') }}">{{ mine.comment if mine and mine.comment }}</textarea></div>
+    <div class="row end"><button class="btn btn-line" name="action" value="generate">{{ t('rep.generate') }}</button>
+    {% if view == 'institute' or current_user.role in ('dfep','admin') %}<button class="btn btn-cde" name="action" value="transmit" formnovalidate onclick="return confirm('{{ t('rep.confirm') }}')">{{ t('rep.transmit_inst') if view == 'institute' else t('rep.transmit_wil') }}</button>{% else %}<span class="muted">{{ t('rep.dfep_only') }}</span>{% endif %}</div>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if view == 'wilaya' %}
+<div class="panel"><h2>{{ t('rep.from_inst') }}</h2>
+<table class="tbl"><tbody>{% for i in insts %}{% set r = inst_reports.get(i.id) %}<tr><td class="code">{{ i.code }}</td><td><b>{{ i.name(lang) }}</b></td><td>{{ rep_status(r) }}</td><td class="actions">{% if r %}<a class="btn btn-sm btn-line" href="{{ url_for('reports.view', rid=r.id) }}">{{ t('see') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% elif view == 'national' %}
+<div class="panel" style="overflow-x:auto"><h2>{{ t('rep.received_w') }} <small class="muted">{{ w_reports|length }} / {{ wilayas|length }}</small></h2>
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.wilaya') }}</th><th>{{ t('obj.status') }}</th><th></th></tr></thead>
+<tbody>{% for w in wilayas %}{% set r = w_reports.get(w.id) %}<tr class="{{ 'dim' if not r }}"><td class="code">{{ w.code }}</td><td><b>{{ w.name(lang) }}</b></td><td>{{ rep_status(r) }}</td><td class="actions">{% if r %}<a class="btn btn-sm btn-line" href="{{ url_for('reports.view', rid=r.id) }}">{{ t('see') }}</a> <a class="btn btn-sm btn-line" href="{{ url_for('reports.export', rid=r.id) }}">Excel</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+{% endblock %}

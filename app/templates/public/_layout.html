@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import flashes with context %}
+{% block body %}
+<header class="pubtop"><a href="{{ url_for('main.home', public=1) }}"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE — {{ t('brand.tagline') }}"></a>
+  <div class="row"><a class="btn btn-sm btn-line" href="{{ url_for('public.catalogue') }}">{{ t('nav.program') }}</a>{% include "partials/langsw.html" %}</div></header>
+<main class="public-wrap" id="main">{{ flashes() }}{% block pub %}{% endblock %}</main>
+<footer class="pubfoot" style="margin-top:0"><div class="wrap"><span>© {{ today.year }} CDE · {{ t('footer.rights') }}</span><span>{{ config.CONTACT_EMAIL }} · <span dir="ltr">{{ config.CONTACT_PHONE }}</span></span></div></footer>
+{% endblock %}

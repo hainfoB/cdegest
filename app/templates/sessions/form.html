@@ -1,0 +1,10 @@
+{% extends "app.html" %}
+{% block title %}{{ t('sess.new') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('sess.new') }}</h1><p>{{ t('sess.new_hint') }}</p></div></div>
+<form class="panel form" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% include "sessions/_fields.html" %}
+  <div class="row end"><a class="btn btn-line" href="{{ url_for('sessions.index') }}">{{ t('cancel') }}</a><button class="btn btn-cde" type="submit">{{ t('sess.create') }}</button></div>
+</form>
+{% endblock %}

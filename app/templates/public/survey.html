@@ -1,0 +1,14 @@
+{% extends "public/_layout.html" %}
+{% block title %}{{ t('nav.surveys') }}{% endblock %}
+{% block pub %}
+<h1 style="font:800 28px var(--fa);margin-bottom:6px">{{ t('pub.survey_title') }}</h1>
+<p class="muted" style="margin-bottom:18px">{{ e.session.title }} · {{ t('pub.survey_anon') }}</p>
+<form method="post" class="panel form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% for q in qs %}<fieldset class="field" style="border:0;padding:0;margin:0 0 18px"><legend style="font-weight:700;margin-bottom:8px">{{ loop.index }}. {{ q.text(lang) }}</legend>
+    <div class="likert">{% for v in range(1, 6) %}<input type="radio" id="q{{ q.id }}v{{ v }}" name="q{{ q.id }}" value="{{ v }}" required><label for="q{{ q.id }}v{{ v }}">{{ v }}</label>{% endfor %}</div>
+  </fieldset>{% endfor %}
+  <p class="hint" style="margin-bottom:14px">{{ t('survey.scale') }}</p>
+  <div class="field"><label for="c">{{ t('pub.survey_comment') }}</label><textarea class="input" id="c" name="comment"></textarea></div>
+  <button class="btn btn-cde btn-block">{{ t('send') }}</button>
+</form>
+{% endblock %}

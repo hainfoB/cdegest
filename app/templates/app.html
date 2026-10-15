@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import flashes with context %}
 {% block body %}
 {% if config.DEMO_MODE %}<div class="demo-banner"><b>DEMO</b> · {{ t('demo.banner') }}</div>{% endif %}
 <header class="apphead"><div class="bar">
@@ -8,29 +9,28 @@
   <div class="app-title"><b>CDEgest</b><span>{{ scope_label }}</span></div>
   <div class="head-sp"></div>
   {% include "partials/langsw.html" %}
-  <div class="userchip">
+  <a class="userchip" href="{{ url_for('org.account') }}" style="text-decoration:none;color:inherit" title="{{ t('acc.title') }}">
     <div class="who"><b>{{ current_user.name }}</b><small>{{ t('role.' ~ current_user.role) }}</small></div>
     <span class="av" aria-hidden="true">{{ current_user.name[:1] }}</span>
-  </div>
+  </a>
   <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="iconbtn" type="submit" title="{{ t('logout') }}" aria-label="{{ t('logout') }}">{{ icon('logout', 18) }}</button></form>
 </div></header>
 
 <div class="shell">
   <nav class="side" id="side" aria-label="{{ t('menu') }}">
-    {% for endpoint, ic, key, roles, step in nav %}
-      {% if not endpoint and loop.previtem and loop.previtem[0] %}<div class="sep"></div>{% endif %}
-      {% if endpoint %}
-        <a href="{{ url_for(endpoint) }}" class="{{ 'on' if request.endpoint == endpoint }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ icon(ic) }}{{ t(key) }}</a>
-      {% else %}
-        <span class="soon" aria-disabled="true">{{ icon(ic) }}{{ t(key) }}<em>{{ t('nav.soon', n=step) }}</em></span>
-      {% endif %}
+    {% set bp_now = request.endpoint.split('.')[0] if request.endpoint else '' %}
+    {% for endpoint, ic, key, roles in nav %}
+      {% if loop.index == 3 %}<div class="sep"></div>{% endif %}
+      {% set on = request.endpoint == endpoint or (endpoint == 'sessions.index' and request.endpoint in ('sessions.view','sessions.create')) or (endpoint == 'nesda.queue' and request.endpoint == 'nesda.review') or (endpoint == 'reports.index' and request.endpoint == 'reports.view') or (endpoint == 'main.dashboard' and request.endpoint == 'main.wilaya_detail') %}
+      <a href="{{ url_for(endpoint) }}" class="{{ 'on' if on }}" {% if on %}aria-current="page"{% endif %}>{{ icon(ic) }}{{ t(key) }}</a>
     {% endfor %}
   </nav>
-  <main class="main" id="main">{% block content %}{% endblock %}</main>
+  <main class="main" id="main">{{ flashes() }}{% block content %}{% endblock %}</main>
 </div>
 <script>
 (()=>{const b=document.getElementById('menuBtn'),s=document.getElementById('side');if(!b)return;
 b.addEventListener('click',()=>{const o=s.classList.toggle('open');b.setAttribute('aria-expanded',o)});})();
+document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(!confirm(f.dataset.confirm))e.preventDefault()}));
 </script>
 {% endblock %}

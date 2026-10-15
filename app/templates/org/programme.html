@@ -1,0 +1,34 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.programme') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.programme') }} · {{ w.name(lang) }}</h1><p>{{ t('prog.hint') }}</p></div>
+  <form method="get" class="row noprint"><select class="input sm" name="y" style="width:auto" onchange="this.form.submit()">{% for y in years %}<option {{ 'selected' if y == year }}>{{ y }}</option>{% endfor %}</select>
+  {% if current_user.role == 'admin' %}<select class="input sm" name="w" style="width:auto" onchange="this.form.submit()">{% for x in wilayas %}<option value="{{ x.code }}" {{ 'selected' if x.id == w.id }}>{{ x.code }}</option>{% endfor %}</select>{% endif %}</form></div>
+<div class="minicards" style="margin-bottom:18px">
+  <div class="mc"><small>{{ t('obj.status') }}</small><b>{{ t('prog.st.' ~ (prog.status if prog else 'none')) }}</b>{% if prog and prog.validated_by %}<small>{{ prog.validated_by.name }} · {{ prog.validated_at|dt }}</small>{% endif %}</div>
+  <div class="mc"><small>{{ t('prog.planned') }}</small><span class="big-n">{{ lines|sum(attribute='planned_groups') }}</span></div>
+  <div class="mc"><small>{{ t('prog.realised') }}</small><span class="big-n">{{ realised.values()|sum }}</span></div>
+</div>
+{% if prog and prog.status == 'returned' and prog.note %}<div class="flash flash-err">{{ prog.note }}</div>{% endif %}
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('dash.table.institute') }}</th><th>{{ t('ref.title') }}</th><th>{{ t('period.semester') }}</th><th>{{ t('prog.planned') }}</th><th>{{ t('prog.realised') }}</th>{% if can_edit %}<th></th>{% endif %}</tr></thead>
+<tbody>{% for l in lines %}<tr><td class="code">{{ l.institute.code }}</td><td><b>{{ l.template.title(lang) }}</b></td><td>S{{ l.semester }}</td><td class="num">{{ l.planned_groups }}</td>
+<td class="num">{{ realised[l.id] }} {% if realised[l.id] >= l.planned_groups %}<span class="badge b-ok">✓</span>{% endif %}</td>
+{% if can_edit %}<td class="actions"><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="y" value="{{ year }}"><input type="hidden" name="line" value="{{ l.id }}"><button class="btn btn-sm btn-bad" name="action" value="del_line">×</button></form></td>{% endif %}</tr>
+{% else %}<tr><td colspan="6" class="empty">{{ t('prog.empty') }}</td></tr>{% endfor %}</tbody></table>
+{% if can_edit %}
+<form method="post" class="row" style="margin-top:16px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="y" value="{{ year }}"><input type="hidden" name="w" value="{{ w.code }}">
+  <select class="input sm" name="institute" style="width:auto" aria-label="{{ t('dash.table.institute') }}">{% for i in insts %}<option value="{{ i.id }}">{{ i.code }}</option>{% endfor %}</select>
+  <select class="input sm" name="template" style="flex:1;min-width:220px" aria-label="{{ t('ref.title') }}">{% for tp in tpls %}<option value="{{ tp.id }}">{{ tp.code }} · {{ tp.title(lang) }}</option>{% endfor %}</select>
+  <select class="input sm" name="semester" style="width:auto" aria-label="{{ t('period.semester') }}"><option value="1">S1</option><option value="2">S2</option></select>
+  <input class="input sm" type="number" name="groups" min="1" value="1" style="width:80px" aria-label="{{ t('prog.planned') }}">
+  <button class="btn btn-cde btn-sm" name="action" value="add_line">+ {{ t('prog.add') }}</button></form>
+{% endif %}</div>
+<div class="row end" style="margin-top:16px">
+  {% if current_user.role in ('admin','dfep','coord') and (not prog or prog.status in ('draft','returned')) and lines %}
+  <form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="y" value="{{ year }}"><input type="hidden" name="w" value="{{ w.code }}"><button class="btn btn-ink" name="action" value="submit">{{ t('prog.submit') }}</button></form>{% endif %}
+  {% if can_validate and prog and prog.status == 'submitted' %}
+  <form method="post" class="row"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="y" value="{{ year }}"><input type="hidden" name="w" value="{{ w.code }}">
+    <input class="input sm" name="note" placeholder="{{ t('prog.note') }}" style="width:260px" aria-label="{{ t('prog.note') }}"><button class="btn btn-line" name="action" value="return">{{ t('prog.return') }}</button>
+    <button class="btn btn-cde" name="action" value="validate">{{ t('prog.validate') }}</button></form>{% endif %}
+</div>
+{% endblock %}

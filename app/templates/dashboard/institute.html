@@ -1,0 +1,25 @@
+{% extends "app.html" %}
+{% from "partials/ui.html" import kpi_families, period_bar, status_pill, sess_badge, nesda_badge with context %}
+{% block title %}{{ t('nav.dashboard') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{{ t('dash.hello', name=current_user.name) }}</h1>
+    <p>{{ t('dash.institute') }} · {{ t('obj.status') }} : {{ status_pill(status) }}</p>
+  </div>
+  {{ period_bar(period, years, 'main.dashboard') }}
+</div>
+
+<div class="minicards" style="margin-bottom:26px">
+  <a class="mc {{ 'alert' if to_close }}" href="{{ url_for('sessions.index', st='running') }}"><small>{{ t('inst.to_close') }}</small><b>{{ to_close|length }}</b></a>
+  <a class="mc {{ 'alert' if to_submit }}" href="{{ url_for('sessions.index', st='closed') }}"><small>{{ t('inst.to_submit') }}</small><b>{{ to_submit|length }}</b></a>
+  <a class="mc" href="{{ url_for('sessions.index') }}"><small>{{ t('inst.to_print') }}</small><b>{{ to_print|length }}</b></a>
+  <a class="mc today" href="{{ url_for('sessions.create') }}"><small>{{ t('nav.sessions') }}</small><b>+ {{ t('sess.new') }}</b></a>
+</div>
+
+{{ kpi_families(families, values, targets, per, icons) }}
+
+<div class="panel"><div class="panelhead"><h2>{{ t('nav.sessions') }}</h2><a class="btn btn-sm btn-line" href="{{ url_for('sessions.index') }}">{{ t('see_all') }}</a></div>
+<table class="tbl"><thead><tr><th>{{ t('sess.title') }}</th><th>{{ t('sess.dates') }}</th><th>{{ t('sess.groups') }}</th><th>{{ t('sess.enrolled') }}</th><th>{{ t('sess.status') }}</th><th>NESDA</th></tr></thead>
+<tbody>{% for s in sessions[:8] %}<tr><td><a href="{{ url_for('sessions.view', sid=s.id) }}">{{ s.title }}</a></td><td>{{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }}</td><td class="num">{{ s.groups|length }}</td><td class="num">{{ s.confirmed|length }}</td><td>{{ sess_badge(s) }}</td><td>{{ nesda_badge(s) }}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

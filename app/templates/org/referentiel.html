@@ -1,0 +1,25 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.referentiel') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.referentiel') }}</h1><p>{{ t('ref.hint') }}</p></div></div>
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('ref.title') }}</th><th>{{ t('ref.theme') }}</th><th>{{ t('ref.kind') }}</th><th>{{ t('mod.hours') }}</th><th>{{ t('ref.used') }}</th><th></th></tr></thead>
+<tbody>{% for tp in tpls %}<tr class="{{ 'dim' if not tp.active }}"><td class="code">{{ tp.code }}</td><td><b>{{ tp.title(lang) }}</b><br><small class="muted">{{ tp.objectives_ar if lang == 'ar' and tp.objectives_ar else (tp.objectives_fr or '') }}</small></td><td>{{ tp.theme }}</td><td>{{ t('kind.' ~ tp.kind) }}</td><td class="num">{{ tp.hours }} h</td><td class="num">{{ used[tp.id] }}</td>
+<td class="actions">{% if can_edit %}<a class="btn btn-sm btn-line" href="{{ url_for('org.referentiel', edit=tp.id) }}#f">{{ t('edit') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% if can_edit %}
+<form class="panel form" method="post" id="f" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ edit.id if edit }}">
+  <h2>{{ t('edit') if edit else t('ref.add') }}</h2>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('dash.table.code') }}</label><input class="input sm" name="code" value="{{ edit.code if edit }}" required dir="ltr"></div>
+    <div class="field"><label>{{ t('ref.theme') }}</label><input class="input sm" name="theme" value="{{ edit.theme if edit }}"></div>
+    <div class="field"><label>{{ t('ref.kind') }}</label><select class="input sm" name="kind">{% for k in ['atelier','bootcamp','seminaire','evenement'] %}<option value="{{ k }}" {{ 'selected' if edit and edit.kind == k }}>{{ t('kind.' ~ k) }}</option>{% endfor %}</select></div>
+    <div class="field"><label>{{ t('mod.hours') }}</label><input class="input sm" type="number" name="hours" value="{{ edit.hours if edit else 9 }}"></div>
+    <div class="field full"><label>{{ t('ref.title') }} (FR)</label><input class="input sm" name="title_fr" value="{{ edit.title_fr if edit }}" required></div>
+    <div class="field full"><label>{{ t('ref.title') }} (AR)</label><input class="input sm" name="title_ar" value="{{ edit.title_ar if edit }}" required dir="rtl"></div>
+    <div class="field full"><label>{{ t('ref.objectives') }} (FR)</label><textarea class="input" name="objectives_fr">{{ edit.objectives_fr if edit and edit.objectives_fr }}</textarea></div>
+    <div class="field full"><label>{{ t('ref.objectives') }} (AR)</label><textarea class="input" name="objectives_ar" dir="rtl">{{ edit.objectives_ar if edit and edit.objectives_ar }}</textarea></div>
+    <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if not edit or edit.active }}> {{ t('active') }}</label>
+  </div>
+  <div class="row end"><button class="btn btn-cde btn-sm">{{ t('save') }}</button></div>
+</form>
+{% endif %}
+{% endblock %}

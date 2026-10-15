@@ -1,24 +1,40 @@
 {% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import period_bar, status_pill with context %}
 {% block title %}{{ t('cmp.title') }}{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <div><h1>{{ t('cmp.title') }}</h1><p><a href="{{ url_for('main.dashboard') }}">{{ t('cmp.back') }}</a></p></div>
-  <span class="pill"><span class="dot"></span>{{ t('dash.period', year=year, q=semester) }}</span>
+  <div><h1>{{ t('cmp.title') }}</h1><p><a href="{{ url_for('main.dashboard', y=period.year, p=period.code) }}">{{ t('cmp.back') }}</a></p></div>
+  {{ period_bar(period, years, 'main.compare') }}
 </div>
-{% if wilayas|length < 2 %}
+<form class="panel noprint" method="get" style="margin-bottom:18px">
+  <input type="hidden" name="y" value="{{ period.year }}"><input type="hidden" name="p" value="{{ period.code }}">
+  <div class="row">
+  {% for i in range(5) %}
+    <select class="input sm" name="w" style="width:auto;min-width:170px" aria-label="{{ t('dash.table.wilaya') }} {{ i + 1 }}">
+      <option value="">—</option>
+      {% for w in all_wilayas %}<option value="{{ w.code }}" {{ 'selected' if codes|length > i and codes[i] == w.code }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}
+    </select>
+  {% endfor %}
+  <button class="btn btn-cde btn-sm" type="submit">{{ icon('columns', 16) }} {{ t('cmp.btn') }}</button>
+  </div>
+</form>
+{% if rows|length < 2 %}
   <div class="panel"><div class="emptybox">{{ icon('columns', 48) }}<p>{{ t('cmp.empty') }}</p></div></div>
 {% else %}
-<div class="empty-note">{{ icon('info', 18) }}<span>{{ t('dash.empty') }}</span></div>
 <div class="panel cmp">
-<table class="tbl"><thead><tr><th>{{ t('cmp.indicator') }}</th>{% for w in wilayas %}<th class="wcol"><span class="code">{{ w.code }}</span> {{ w.name(lang) }}{% if w.is_demo %}<span class="tag">DEMO</span>{% endif %}</th>{% endfor %}</tr></thead>
+<table class="tbl"><thead><tr><th>{{ t('cmp.indicator') }}</th>{% for r in rows %}<th class="wcol"><span class="code">{{ r.wilaya.code }}</span> {{ r.wilaya.name(lang) }}</th>{% endfor %}</tr></thead>
 <tbody>
-<tr class="famrow"><td colspan="{{ wilayas|length + 1 }}">{{ t('obj.status') }}</td></tr>
-<tr><td>{{ t('obj.status') }}</td>{% for w in wilayas %}<td><span class="stp st-none-p"><i class="st st-none"></i>{{ t('obj.none') }}</span></td>{% endfor %}</tr>
-<tr><td>{{ t('nat.cde') }}</td>{% for w in wilayas %}<td class="num">{{ w.institutes|length }}</td>{% endfor %}</tr>
+<tr><td><b>{{ t('obj.status') }}</b></td>{% for r in rows %}<td>{{ status_pill(r.status) }}</td>{% endfor %}</tr>
+<tr><td>{{ t('nat.cde') }}</td>{% for r in rows %}<td class="num">{{ r.n_inst }}</td>{% endfor %}</tr>
 {% for fam, keys in families %}
-<tr class="famrow"><td colspan="{{ wilayas|length + 1 }}">{{ t('kpi.family.' ~ fam) }}</td></tr>
-{% for k in keys %}<tr><td><span class="kl">{{ icon(icons[k], 18) }}{{ t('kpi.' ~ k) }}</span></td>{% for w in wilayas %}<td class="num">—<small class="tgt">{{ t('kpi.target') }} : —</small></td>{% endfor %}</tr>{% endfor %}
-{% endfor %}
+<tr class="famrow"><td colspan="{{ rows|length + 1 }}">{{ t('kpi.family.' ~ fam) }}</td></tr>
+{% for k in keys %}{% set best = [] %}
+<tr><td><span class="kl">{{ icon(icons[k], 18) }}{{ t('kpi.' ~ k) }}</span></td>
+{% for r in rows %}{% set st = r.per[k] %}<td class="num"><b style="color:var(--ink)">{{ fmt(k, r['values'][k]) }}</b>
+  {% if st != 'none' %}<i class="st st-{{ st }}" title="{{ t('obj.' ~ st) }}" style="margin-inline-start:6px"></i>{% endif %}
+  <small class="tgt">{{ t('kpi.target') }} : {{ fmt(k, r.targets.get(k)) if r.targets.get(k) is not none else '—' }}</small></td>{% endfor %}</tr>
+{% endfor %}{% endfor %}
 </tbody></table></div>
 {% endif %}
 {% endblock %}

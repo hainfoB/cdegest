@@ -1,0 +1,11 @@
+{% extends "public/_layout.html" %}
+{% block title %}{{ t('pub.verify') }}{% endblock %}
+{% block pub %}
+<h1 style="font:800 30px var(--fa);margin-bottom:14px">{{ t('pub.verify') }}</h1>
+<form method="get" action="{{ url_for('public.verify') }}" class="row" style="margin-bottom:20px"><input class="input" name="no" value="{{ cert_no }}" placeholder="CDE34-2026-000123" dir="ltr" style="max-width:320px" aria-label="{{ t('cert.number') }}"><button class="btn btn-cde">{{ t('pub.verify_btn') }}</button></form>
+{% if e %}{% set s = e.session %}
+<div class="verify-ok"><h2 style="font:800 20px var(--fa);color:#0B7A4B">✓ {{ t('pub.verify_ok') }}</h2>
+  <dl class="kv" style="margin-top:12px"><dt>{{ t('cert.number') }}</dt><dd dir="ltr">{{ e.cert_no }}</dd><dt>{{ t('users.name') }}</dt><dd>{{ e.participant.last_name|upper }} {{ e.participant.first_name[:1] }}.</dd>
+  <dt>{{ t('sess.title') }}</dt><dd>{{ s.title }}</dd><dt>{{ t('dash.table.institute') }}</dt><dd>{{ s.institute.name(lang) }}</dd><dt>{{ t('sess.dates') }}</dt><dd>{{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }}</dd><dt>{{ t('cert.issued') }}</dt><dd>{{ e.cert_issued_on|d }}</dd></dl></div>
+{% elif searched %}<div class="verify-bad">✗ {{ t('pub.verify_bad') }}</div>{% endif %}
+{% endblock %}

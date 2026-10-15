@@ -1,0 +1,31 @@
+{% extends "public/_layout.html" %}
+{% block title %}{{ t('pub.ticket') }}{% endblock %}
+{% block pub %}
+<div class="ticket">
+  <div class="head"><div><small>{{ t('pub.ticket') }}</small><h1>{{ e.participant.full_name }}</h1><p style="color:#cfe0ea">{{ s.template.title(lang) if s.template else s.title }} · {{ s.institute.name(lang) }}</p></div>
+    <div class="qr">{{ qr|safe }}</div></div>
+  <div class="body stack">
+    {% if msg %}<div class="flash flash-{{ msg[0] }}">{{ msg[1] }}</div>{% endif %}
+    <div class="grid3">
+      <div><small class="muted">{{ t('enr.status') }}</small><p><span class="badge {{ {'confirmed':'b-ok','pending':'b-wait','waitlist':'b-wait','cancelled':'b-draft'}[e.status] }}">{{ t('enr.st.' ~ e.status) }}</span></p></div>
+      <div><small class="muted">{{ t('grp.group') }}</small><p><b>{{ e.group.name if e.group else '—' }}</b> {{ e.group.room if e.group and e.group.room }}</p></div>
+      <div><small class="muted">{{ t('kpi.attendance') }}</small><p><b>{{ stats.rate ~ ' %' if stats.rate is not none else '—' }}</b> <small class="muted">({{ stats.present }}/{{ stats.expected }})</small></p></div>
+    </div>
+    {% if today_slots and e.status == 'confirmed' and s.mode != 'onsite' %}
+    <form method="post" class="panel" style="text-align:center"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <h2>{{ t('pub.code_title') }}</h2><p class="muted" style="margin-bottom:10px">{{ t('pub.code_hint') }}</p>
+      <div class="row" style="justify-content:center"><input class="input code-in" name="code" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required aria-label="{{ t('pub.code_title') }}"><button class="btn btn-cde">OK</button></div></form>
+    {% endif %}
+    {% if e.group %}
+    <div class="panel"><h2>{{ t('pub.schedule') }}</h2><table class="tbl compact"><tbody>{% for sl in e.group.slots %}{% set a = stats.marks.get(sl.id) %}<tr class="{{ 'dim' if sl.day > today }}"><td>{{ sl.day|d }}</td><td>{{ sl.start }}–{{ sl.end }}</td><td>{{ sl.module.title }}</td><td>{% if a %}<span class="m m-{{ a.status }}">{{ t('att.short.' ~ a.status) }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% endif %}
+    {% if can_survey %}<div class="flash flash-ok"><span>{{ t('pub.survey_invite') }}</span> <a class="btn btn-sm btn-cde" href="{{ url_for('public.survey', token=e.token) }}">{{ t('pub.survey_go') }}</a></div>{% endif %}
+    {% if e.cert_no and s.certificates_open %}
+      <div class="verify-ok"><b>{{ t('pub.cert_ready', no=e.cert_no) }}</b><br><small>{{ t('pub.cert_where', inst=s.institute.name(lang)) }}</small></div>
+    {% elif finished and e.status == 'confirmed' %}
+      <p class="muted">{{ t('pub.cert_wait') }}</p>
+    {% endif %}
+    <p class="muted" style="font-size:13px">{{ t('pub.keep_link') }}</p>
+  </div>
+</div>
+{% endblock %}

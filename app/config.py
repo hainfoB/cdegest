@@ -21,6 +21,9 @@ class Config:
     DEMO_MODE = os.environ.get("DEMO_MODE", "1") == "1"
     # Show clickable accounts on the login page (never in production)
     SHOW_DEMO_ACCOUNTS = os.environ.get("SHOW_DEMO_ACCOUNTS", "0") == "1"
+    # Validation NESDA de la présence : 1 = la DG NESDA valide après le représentant de wilaya
+    NESDA_DG_VALIDATION = os.environ.get("NESDA_DG_VALIDATION", "0") == "1"
+    PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://fp.cde.dz")
     DEFAULT_LANG = "ar"
     LANGS = ("ar", "fr", "en")
     TIMEZONE = "Africa/Algiers"

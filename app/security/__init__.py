@@ -1,53 +1,67 @@
 """Roles, perimeters and access decorators.
 
 Every screen that lists data must go through the scope helpers below:
-no blueprint is allowed to query Institute/User/... without them.
+no blueprint is allowed to query Institute/User/Session/... without them.
 """
 from functools import wraps
 
 from flask import abort
 from flask_login import current_user, login_required
 
-from ..models import Institute, User, Wilaya
+from ..models import Institute, Module, Session, Slot, User, Wilaya, Group
 
 ADMIN, MFEP, DFEP, COORD, RESP, TEACHER = "admin", "mfep", "dfep", "coord", "resp", "formateur"
-ROLES = (ADMIN, MFEP, DFEP, COORD, RESP, TEACHER)
+NESDA, NESDA_DG = "nesda", "nesda_dg"
+ROLES = (ADMIN, MFEP, DFEP, COORD, RESP, TEACHER, NESDA_DG, NESDA)
 
-# Level of each role in the hierarchy (used for display and for who-manages-whom)
-LEVEL = {ADMIN: "platform", MFEP: "national", DFEP: "wilaya", COORD: "wilaya", RESP: "institute", TEACHER: "institute"}
+LEVEL = {ADMIN: "platform", MFEP: "national", NESDA_DG: "national", DFEP: "wilaya", COORD: "wilaya",
+         NESDA: "wilaya", RESP: "institute", TEACHER: "institute"}
 
-# Roles that must be attached to a wilaya / an institute
-NEEDS_WILAYA = {DFEP, COORD}
+NATIONAL = {ADMIN, MFEP, NESDA_DG}
+WILAYA_LEVEL = {DFEP, COORD, NESDA}
+NEEDS_WILAYA = {DFEP, COORD, NESDA}
 NEEDS_INSTITUTE = {RESP, TEACHER}
 
-# Roles each role may create (étape 3)
+# Who may create which accounts
 CAN_CREATE = {
     ADMIN: set(ROLES),
     MFEP: {DFEP, COORD},
+    NESDA_DG: {NESDA},
     DFEP: {COORD, RESP, TEACHER},
     COORD: {RESP, TEACHER},
     RESP: {TEACHER},
     TEACHER: set(),
+    NESDA: set(),
 }
 
-# The national level sees aggregates only — never personal data (loi 18-07)
+# The MFEP sees aggregates only — never personal data (loi 18-07)
 AGGREGATE_ONLY = {MFEP}
 
-# Sidebar: (endpoint or None if not built yet, icon, i18n key, roles, step where it arrives)
+# Who manages sessions of an institute
+SESSION_MANAGERS = {ADMIN, RESP}
+# Who prints certificates (CDE of the wilaya, after NESDA validation)
+CERT_PRINTERS = {ADMIN, RESP, COORD, DFEP}
+# Who validates attendance for NESDA
+NESDA_VALIDATORS = {NESDA, NESDA_DG, ADMIN}
+
+ALL = set(ROLES)
+# Sidebar: (endpoint, icon, i18n key, roles)
 NAV = [
-    ("main.dashboard", "grid", "nav.dashboard", set(ROLES), None),
-    ("main.compare", "columns", "nav.compare", {ADMIN, MFEP}, None),
-    (None, "book", "nav.referentiel", {ADMIN, MFEP, DFEP, COORD, RESP}, 3),
-    (None, "target", "nav.objectives", {ADMIN, MFEP, DFEP, COORD}, 3),
-    (None, "calendar", "nav.programme", {ADMIN, DFEP, COORD, RESP}, 3),
-    (None, "building", "nav.institutes", {ADMIN, MFEP, DFEP, COORD}, 3),
-    (None, "users", "nav.users", {ADMIN, MFEP, DFEP, COORD, RESP}, 3),
-    (None, "layers", "nav.sessions", {ADMIN, DFEP, COORD, RESP, TEACHER}, 4),
-    (None, "qr", "nav.attendance", {ADMIN, DFEP, COORD, RESP, TEACHER}, 4),
-    (None, "award", "nav.certificates", {ADMIN, DFEP, COORD, RESP}, 4),
-    (None, "smile", "nav.surveys", {ADMIN, MFEP, DFEP, COORD, RESP}, 5),
-    (None, "file", "nav.reports", {ADMIN, MFEP, DFEP, COORD, RESP}, 6),
-    (None, "shield", "nav.audit", {ADMIN, MFEP, DFEP, COORD, RESP}, 3),
+    ("main.dashboard", "grid", "nav.dashboard", ALL),
+    ("main.compare", "columns", "nav.compare", {ADMIN, MFEP}),
+    ("sessions.my_slots", "qr", "nav.myslots", {TEACHER}),
+    ("sessions.index", "layers", "nav.sessions", {ADMIN, DFEP, COORD, RESP, TEACHER}),
+    ("nesda.queue", "check", "nav.nesda_queue", {ADMIN, NESDA, NESDA_DG}),
+    ("nesda.participants", "thumb", "nav.nesda_people", {ADMIN, NESDA, NESDA_DG, RESP, COORD, DFEP}),
+    ("org.objectives", "target", "nav.objectives", {ADMIN, MFEP, DFEP, COORD, RESP}),
+    ("org.programme", "calendar", "nav.programme", {ADMIN, DFEP, COORD, RESP}),
+    ("reports.index", "file", "nav.reports", {ADMIN, MFEP, DFEP, COORD, RESP}),
+    ("org.surveys", "smile", "nav.surveys", {ADMIN, MFEP, DFEP, COORD, RESP, NESDA_DG}),
+    ("org.referentiel", "book", "nav.referentiel", {ADMIN, MFEP, DFEP, COORD, RESP}),
+    ("org.institutes", "building", "nav.institutes", {ADMIN, MFEP, DFEP, COORD, NESDA_DG, NESDA}),
+    ("org.users", "users", "nav.users", {ADMIN, MFEP, DFEP, COORD, RESP, NESDA_DG}),
+    ("org.audit", "shield", "nav.audit", {ADMIN, MFEP, DFEP, COORD, RESP, NESDA_DG}),
+    ("main.integration", "globe", "nav.integration", {ADMIN, MFEP}),
 ]
 
 
@@ -68,45 +82,79 @@ def roles_required(*roles):
     return deco
 
 
+def sees_people(user):
+    """Nominative data (participants) are hidden from the national ministry level."""
+    return user.role not in AGGREGATE_ONLY
+
+
 # ---------- perimeters ----------
 
 def visible_wilayas(user):
     q = Wilaya.query
-    if user.role in (ADMIN, MFEP):
+    if user.role in NATIONAL:
         return q.order_by(Wilaya.code)
     w = user.scope_wilaya
     return q.filter(Wilaya.id == (w.id if w else -1))
 
 
-def visible_institutes(user):
-    q = Institute.query.filter(Institute.active.is_(True))
-    if user.role in (ADMIN, MFEP):
+def visible_institutes(user, include_inactive=False):
+    q = Institute.query
+    if not include_inactive:
+        q = q.filter(Institute.active.is_(True))
+    if user.role in NATIONAL:
         return q.order_by(Institute.code)
-    if user.role in (DFEP, COORD):
+    if user.role in WILAYA_LEVEL:
         return q.filter(Institute.wilaya_id == (user.wilaya_id or -1)).order_by(Institute.code)
     return q.filter(Institute.id == (user.institute_id or -1))
 
 
+def visible_institute_ids(user):
+    return [i.id for i in visible_institutes(user, include_inactive=True)]
+
+
 def visible_users(user):
-    """Accounts a user may see. MFEP sees wilaya-level accounts only (no trainer lists)."""
     q = User.query
     if user.role == ADMIN:
         return q
     if user.role == MFEP:
         return q.filter(User.role.in_((MFEP, DFEP, COORD)))
+    if user.role == NESDA_DG:
+        return q.filter(User.role.in_((NESDA_DG, NESDA)))
     if user.role in (DFEP, COORD):
-        inst_ids = [i.id for i in visible_institutes(user)]
+        inst_ids = visible_institute_ids(user)
         return q.filter(
-            (User.wilaya_id == user.wilaya_id) | (User.institute_id.in_(inst_ids or [-1]))
+            ((User.wilaya_id == user.wilaya_id) & User.role.in_((DFEP, COORD, RESP, TEACHER, NESDA)))
+            | (User.institute_id.in_(inst_ids or [-1]))
         )
     if user.role == RESP:
         return q.filter(User.institute_id == user.institute_id)
     return q.filter(User.id == user.id)
 
 
+def visible_sessions(user):
+    q = Session.query
+    if user.role in (ADMIN, NESDA_DG):
+        return q
+    if user.role == MFEP:
+        return q.filter(Session.id == -1)          # aggregates only
+    if user.role == TEACHER:
+        sup = Module.query.with_entities(Module.session_id).filter(Module.supervisor_id == user.id)
+        taught = (Slot.query.join(Group, Slot.group_id == Group.id)
+                  .with_entities(Group.session_id).filter(Slot.teacher_id == user.id))
+        return q.filter(Session.id.in_(sup) | Session.id.in_(taught))
+    return q.filter(Session.institute_id.in_(visible_institute_ids(user) or [-1]))
+
+
+def can_see_session(user, s):
+    return visible_sessions(user).filter(Session.id == s.id).count() == 1
+
+
+def can_manage_session(user, s):
+    return user.role == ADMIN or (user.role == RESP and s.institute_id == user.institute_id)
+
+
 def scope_label(user, lang):
-    """Human label of the user's perimeter, for the header."""
-    if user.role in (ADMIN, MFEP):
+    if user.role in NATIONAL:
         return {"ar": "المستوى الوطني", "fr": "Niveau national", "en": "National level"}[lang]
     if user.institute is not None:
         return user.institute.name(lang)

@@ -1,0 +1,25 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.institutes') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.institutes') }}</h1><p>{{ scope_label }} · {{ insts|length }}</p></div></div>
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('dash.table.wilaya') }}</th><th>{{ t('inst.opened') }}</th><th>{{ t('nav.sessions') }}</th><th>{{ t('dash.scope.accounts') }}</th><th></th></tr></thead>
+<tbody>{% for i in insts %}<tr class="{{ 'dim' if not i.active }}"><td class="code">{{ i.code }}</td><td><b>{{ i.name(lang) }}</b><br><small class="muted">{{ i.address or '' }}</small></td><td>{{ i.wilaya.name(lang) }}</td><td>{{ i.cde_opened_on|d }}</td><td class="num">{{ counts[i.id] }}</td><td class="num">{{ staff[i.id] }}</td>
+<td class="actions">{% if can_edit %}<a class="btn btn-sm btn-line" href="{{ url_for('org.institutes', edit=i.id) }}#f">{{ t('edit') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% if can_edit %}
+<form class="panel form" method="post" id="f" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>{{ t('edit') if edit else t('inst.add') }}</h2><input type="hidden" name="id" value="{{ edit.id if edit }}">
+  <div class="fgrid">
+    {% if current_user.role == 'admin' %}<div class="field"><label>{{ t('dash.table.wilaya') }}</label><select class="input sm" name="wilaya">{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if edit and edit.wilaya_id == w.id }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="field"><label>{{ t('dash.table.code') }}</label><input class="input sm" name="code" value="{{ edit.code if edit }}" placeholder="INSFP-BBA-04" required dir="ltr"></div>
+    <div class="field"><label>{{ t('inst.kind') }}</label><select class="input sm" name="kind">{% for k in ['INSFP','CFPA','IEP'] %}<option {{ 'selected' if edit and edit.kind == k }}>{{ k }}</option>{% endfor %}</select></div>
+    <div class="field"><label>{{ t('inst.name_fr') }}</label><input class="input sm" name="name_fr" value="{{ edit.name_fr if edit }}" required></div>
+    <div class="field"><label>{{ t('inst.name_ar') }}</label><input class="input sm" name="name_ar" value="{{ edit.name_ar if edit }}" required dir="rtl"></div>
+    <div class="field"><label>{{ t('inst.address') }}</label><input class="input sm" name="address" value="{{ edit.address if edit and edit.address }}"></div>
+    <div class="field"><label>{{ t('pub.phone') }}</label><input class="input sm" name="phone" value="{{ edit.phone if edit and edit.phone }}" dir="ltr"></div>
+    <div class="field"><label>{{ t('inst.opened') }}</label><input class="input sm" type="date" name="cde_opened_on" value="{{ edit.cde_opened_on if edit and edit.cde_opened_on }}"></div>
+    <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if not edit or edit.active }}> {{ t('active') }}</label>
+  </div>
+  <div class="row end">{% if edit %}<a class="btn btn-sm btn-line" href="{{ url_for('org.institutes') }}">{{ t('cancel') }}</a>{% endif %}<button class="btn btn-cde btn-sm">{{ t('save') }}</button></div>
+</form>
+{% endif %}
+{% endblock %}

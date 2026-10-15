@@ -6,7 +6,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: flask --app wsgi db upgrade && flask --app wsgi seed-base && flask --app wsgi sync-passwords && gunicorn wsgi:app --worker-class gthread --workers 1 --threads 8 --timeout 120
+    startCommand: flask --app wsgi db upgrade && flask --app wsgi seed-base && flask --app wsgi seed-demo && flask --app wsgi sync-passwords && gunicorn wsgi:app --worker-class gthread --workers 1 --threads 8 --timeout 120
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -29,5 +29,11 @@ services:
         sync: false
       - key: PASSWORD_ENSEIGNANT_BBA01
         sync: false
+      - key: PASSWORD_NESDA_BBA
+        sync: false
+      - key: PASSWORD_DG_NESDA
+        sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: NESDA_DG_VALIDATION
+        value: "0"

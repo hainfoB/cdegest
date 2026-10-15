@@ -1,0 +1,9 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.myslots') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.myslots') }}</h1><p>{{ t('call.rule') }}</p></div></div>
+<div class="panel"><table class="tbl"><thead><tr><th>{{ t('slot.day') }}</th><th>{{ t('slot.time') }}</th><th>{{ t('mod.title') }}</th><th>{{ t('sess.title') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('nav.attendance') }}</th></tr></thead>
+<tbody>{% for sl in rows %}<tr class="{{ 'dim' if sl.day > today }}"><td>{{ sl.day|d }}</td><td>{{ sl.start }}–{{ sl.end }}</td><td><b>{{ sl.module.title }}</b></td><td>{{ sl.group.session.title }}</td><td>{{ sl.group.name }}</td>
+<td>{% if sl.day == today %}<a class="btn btn-sm btn-cde" href="{{ url_for('sessions.roll_call', slot_id=sl.id) }}">{{ t('call.done') if sl.called_at else t('call.do') }}</a>{% elif sl.called_at %}<a class="badge b-ok" href="{{ url_for('sessions.roll_call', slot_id=sl.id) }}">{{ t('call.done') }}</a>{% elif sl.day < today %}<span class="badge b-bad">{{ t('call.missing') }}</span>{% else %}<span class="badge b-draft">{{ t('call.later') }}</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="empty">{{ t('teacher.no_today') }}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

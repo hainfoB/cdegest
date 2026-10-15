@@ -65,15 +65,18 @@ def test_mfep_sees_all_wilayas_but_no_institute_staff(app):
     assert visible_wilayas(u).count() == 69
     roles = {x.role for x in visible_users(u)}
     assert roles <= {"mfep", "dfep", "coord"}, "MFEP must not list institute staff"
+    from app.security import visible_sessions
+    assert visible_sessions(u).count() == 0, "MFEP sees aggregates only"
 
 
 @pytest.mark.parametrize("email", ["dfep.bba@cdegest.dz", "coord.bba@cdegest.dz"])
 def test_wilaya_roles_limited_to_bba(app, email):
     u = _u(email)
     codes = {i.code for i in visible_institutes(u)}
-    assert codes == {"INSFP-BBA-01", "INSFP-BBA-02"}
+    assert codes == {"INSFP-BBA-01", "INSFP-BBA-02", "INSFP-BBA-03"}
     assert [w.code for w in visible_wilayas(u)] == ["34"]
     assert all(x.scope_wilaya and x.scope_wilaya.code == "34" for x in visible_users(u))
+    assert all(x.role != "nesda_dg" for x in visible_users(u))
 
 
 def test_dfep_and_coord_have_same_perimeter(app):
@@ -102,6 +105,21 @@ def test_wilaya_dashboard_does_not_leak_other_wilayas(client):
 def test_compare_reserved_to_national(client):
     login(client, "coord.bba@cdegest.dz")
     assert client.get("/comparaison?w=34&w=19").status_code == 403
+
+
+ALL = ACCOUNTS + ["nesda.bba@cdegest.dz", "dg.nesda@cdegest.dz"]
+
+
+@pytest.mark.parametrize("email", ALL)
+def test_every_menu_entry_opens(client, email):
+    from app.security import nav_for
+    login(client, email)
+    u = User.query.filter_by(email=email).first()
+    from flask import url_for
+    with client.application.test_request_context():
+        urls = [url_for(n[0]) for n in nav_for(u)]
+    for url in urls:
+        assert client.get(url + "?lang=ar").status_code == 200, url
 
 
 def test_compare_caps_at_five(client):

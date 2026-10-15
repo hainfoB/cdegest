@@ -16,7 +16,7 @@
     <a class="on" href="{{ url_for('main.home') }}">{{ t('nav.home') }}</a>
     <a href="#">{{ t('nav.about') }}</a>
     <a href="#">{{ t('nav.missions') }}</a>
-    <a href="#">{{ t('nav.program') }}</a>
+    <a href="{{ url_for('public.catalogue') }}">{{ t('nav.program') }}</a>
     <a href="#">{{ t('nav.faq') }}</a>
     <a href="#">{{ t('nav.contact') }}</a>
   </nav>
@@ -31,7 +31,7 @@
       <h1>{{ t('home.title') }}</h1>
       <h2>{{ t('home.subtitle') }}</h2>
       <p>{{ t('home.lead') }}</p>
-      <div class="ctas"><a class="btn btn-cde" href="#">{{ t('cta.register') }}</a><a class="btn btn-ghost" href="{{ url_for('auth.login') }}">{{ t('cta.login') }}</a></div>
+      <div class="ctas"><a class="btn btn-cde" href="{{ url_for('public.catalogue') }}">{{ t('cta.register') }}</a><a class="btn btn-ghost" href="{{ url_for('auth.login') }}">{{ t('cta.login') }}</a></div>
     </div></div>
   </section>
 
@@ -43,5 +43,10 @@
   </div></div></section>
 </main>
 
+{% if open_sessions %}
+<section class="wrap" style="margin-top:56px"><h2 style="font:800 28px var(--fa);margin-bottom:16px">{{ t('pub.cat_title') }}</h2>
+<div class="minicards">{% for s in open_sessions %}<a class="mc" href="{{ url_for('public.register', slug=s.slug) }}"><small>{{ s.institute.wilaya.name(lang) }} · {{ s.starts_on|d }}</small><b>{{ s.template.title(lang) if s.template else s.title }}</b><small>{{ s.institute.name(lang) }}</small></a>{% endfor %}</div>
+<p style="margin-top:14px"><a class="btn btn-line btn-sm" href="{{ url_for('public.catalogue') }}">{{ t('see_all') }}</a> <a class="btn btn-line btn-sm" href="{{ url_for('public.verify') }}">{{ t('pub.verify') }}</a></p></section>
+{% endif %}
 <footer class="pubfoot"><div class="wrap"><span>© {{ today.year }} CDE · {{ t('footer.rights') }}</span><span>CDEgest</span></div></footer>
 {% endblock %}

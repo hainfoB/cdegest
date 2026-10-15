@@ -5,23 +5,20 @@ institut (INSFP) → wilaya (DFEP, coordinateur) → ministère (MFEP). Trilingu
 
 Dossier d'architecture : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
-## Avancement
-| Étape | Contenu | État |
-|---|---|---|
-| 1 | Architecture, rôles, droits, indicateurs | ✅ validée |
-| 2 | Socle technique, connexion par rôle, i18n, charte CDE, vue nationale 69 wilayas, comparaison | ✅ livrée |
-| 3 | Référentiel, objectifs, programme annuel, instituts, comptes, journal | à venir |
-| 4 | Sessions, modules, groupes, inscriptions, présence, attestations | à venir |
-| 5 | Questionnaire de satisfaction, statut NESDA | à venir |
-| 6 | Indicateurs et rapports trimestriels | à venir |
-| 7 | Données de démonstration complètes, déploiement Railway | à venir |
-| 8 | Recette | à venir |
+## Fonctions
+- **7 profils** : MFEP, DFEP, coordinateur CDE de wilaya, responsable CDE d'institut, enseignant intervenant, représentant NESDA de wilaya, DG NESDA (+ administrateur).
+- **15 indicateurs** par semestre et par année professionnelle, cibles et statut (atteint, en bonne voie, en retard, non atteint) du CDE jusqu'au national ; vue des 69 wilayas et comparaison jusqu'à 5.
+- **Formation** : référentiel, objectifs, programme annuel, sessions avec modules, groupes et créneaux, inscription publique, appel par l'enseignant, abandons.
+- **Validation NESDA de la présence** avant l'attestation, imprimable au CDE et vérifiable par QR.
+- Satisfaction anonyme, rapports semestriels figés, journal d'audit, trilingue AR/FR/EN, API et widget pour fp.cde.dz.
+
+Détails : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## Lancer en local (gratuit)
 **Windows** : installer [Python 3.11+](https://www.python.org/downloads/) (cocher *Add Python to PATH*), télécharger le dépôt, puis double-cliquer sur **`demarrer-windows.bat`**.
 **Linux / macOS** : `./demarrer.sh`
 
-Au premier lancement, le script installe tout, crée la base locale (SQLite), génère un mot de passe privé par compte dans **`ACCES_LOCAL.txt`** (jamais envoyé sur GitHub) et ouvre http://localhost:5000.
+Au premier lancement (1 à 2 minutes), le script installe tout, crée la base locale (SQLite), charge les données de démonstration fictives, génère un mot de passe privé par compte dans **`ACCES_LOCAL.txt`** (jamais envoyé sur GitHub) et ouvre http://localhost:5000.
 
 Tests : `pytest -q`
 
@@ -41,6 +38,8 @@ Les comptes ne sont **jamais affichés** sur la page de connexion. Chaque mot de
 | Coordinateur CDE BBA | coord.bba@cdegest.dz | `PASSWORD_COORD_BBA` |
 | Responsable CDE INSFP BBA 01 | resp.insfp-bba01@cdegest.dz | `PASSWORD_RESP_BBA01` |
 | Enseignant INSFP BBA 01 | formateur.bba01@cdegest.dz | `PASSWORD_ENSEIGNANT_BBA01` |
+| Représentant NESDA BBA | nesda.bba@cdegest.dz | `PASSWORD_NESDA_BBA` |
+| DG NESDA | dg.nesda@cdegest.dz | `PASSWORD_DG_NESDA` |
 | Administrateur plateforme | admin@cdegest.dz | `ADMIN_PASSWORD` |
 
 Modifier une variable puis redéployer applique le nouveau mot de passe (`flask sync-passwords` au démarrage).
@@ -52,6 +51,7 @@ Modifier une variable puis redéployer applique le nouveau mot de passe (`flask 
 | `SECRET_KEY` | longue chaîne aléatoire |
 | `APP_URL` | URL publique (active les cookies sécurisés) |
 | `DEMO_MODE` | `1` : charge les données fictives de Sétif et M'Sila et affiche le bandeau de démonstration |
+| `NESDA_DG_VALIDATION` | `1` : la DG NESDA valide après le représentant de wilaya (par défaut `0`) |
 | `SHOW_DEMO_ACCOUNTS` | laisser à `0` (aucun compte affiché sur la page de connexion) |
 | `PASSWORD_*`, `ADMIN_PASSWORD` | mots de passe des comptes (voir ci-dessus) |
 

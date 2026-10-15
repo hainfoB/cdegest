@@ -1,0 +1,7 @@
+<!doctype html><html lang="{{ lang }}" dir="{{ dir }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&family=Tajawal:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cde.css') }}"><title>CDE</title></head>
+<body style="background:transparent"><div class="stack" style="padding:8px">
+{% for s in rows %}<article class="sesscard"><h3>{{ s.template.title(lang) if s.template else s.title }}</h3><p class="muted">{{ s.institute.name(lang) }} · {{ s.starts_on|d }}</p>
+<a class="btn btn-cde btn-sm" style="align-self:flex-start" target="_top" href="{{ url_for('public.register', slug=s.slug, _external=True) }}">{{ t('cta.register') }}</a></article>
+{% else %}<p class="empty">{{ t('pub.none_open') }}</p>{% endfor %}</div></body></html>

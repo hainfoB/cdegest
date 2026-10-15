@@ -1,0 +1,32 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.users') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.users') }}</h1><p>{{ t('users.hint') }}</p></div></div>
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('login.email') }}</th><th>{{ t('users.role') }}</th><th>{{ t('users.scope') }}</th><th>{{ t('users.last_login') }}</th><th></th></tr></thead>
+<tbody>{% for u in rows %}<tr class="{{ 'dim' if not u.active }}"><td><b>{{ u.name }}</b></td><td dir="ltr" style="text-align:start">{{ u.email }}</td><td><span class="badge b-ink">{{ t('role.' ~ u.role) }}</span></td>
+<td>{{ u.institute.code if u.institute else (u.wilaya.name(lang) if u.wilaya else t('scope.national')) }}</td><td>{{ u.last_login_at|dt }}</td>
+<td class="actions">{% if can_manage(u) %}<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ u.id }}">
+  <button class="btn btn-sm btn-line" name="action" value="reset">{{ t('users.reset') }}</button>
+  <button class="btn btn-sm {{ 'btn-bad' if u.active else 'btn-cde' }}" name="action" value="toggle">{{ t('users.disable') if u.active else t('users.enable') }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% if creatable %}
+<form class="panel form" method="post" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="create">
+  <h2>{{ t('users.add') }}</h2>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('users.role') }}</label><select class="input sm" name="role" id="role" required>{% for r in creatable %}<option value="{{ r }}">{{ t('role.' ~ r) }}</option>{% endfor %}</select></div>
+    <div class="field"><label>{{ t('users.name') }}</label><input class="input sm" name="name" required></div>
+    <div class="field"><label>{{ t('login.email') }}</label><input class="input sm" type="email" name="email" required dir="ltr"></div>
+    <div class="field"><label>{{ t('pub.phone') }}</label><input class="input sm" name="phone" dir="ltr"></div>
+    <div class="field" data-for="inst"><label>{{ t('dash.table.institute') }}</label><select class="input sm" name="institute">{% for i in institutes %}<option value="{{ i.id }}">{{ i.code }}</option>{% endfor %}</select></div>
+    {% if current_user.role in ('admin','mfep','nesda_dg') %}<div class="field" data-for="wil"><label>{{ t('dash.table.wilaya') }}</label><select class="input sm" name="wilaya">{% for w in wilayas %}<option value="{{ w.code }}">{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="field"><label>{{ t('lang') }}</label><select class="input sm" name="lang"><option value="ar">العربية</option><option value="fr">Français</option><option value="en">English</option></select></div>
+  </div>
+  <p class="hint">{{ t('users.pwd_hint') }}</p>
+  <div class="row end"><button class="btn btn-cde btn-sm">+ {{ t('users.add') }}</button></div>
+</form>
+<script>
+(()=>{const r=document.getElementById('role');const inst={{ NEEDS_INSTITUTE|list|tojson }},wil={{ NEEDS_WILAYA|list|tojson }};
+function u(){document.querySelectorAll('[data-for=inst]').forEach(e=>e.hidden=!inst.includes(r.value));document.querySelectorAll('[data-for=wil]').forEach(e=>e.hidden=!wil.includes(r.value))}
+r.addEventListener('change',u);u();})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+<div class="fgrid">
+  {% if not s %}
+  {% if current_user.role != 'resp' %}
+  <div class="field"><label for="institute">{{ t('dash.table.institute') }}</label><select class="input" id="institute" name="institute" required>{% for i in insts %}<option value="{{ i.id }}">{{ i.code }} — {{ i.name(lang) }}</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="field full"><label for="template">{{ t('nav.referentiel') }}</label>
+    <select class="input" id="template" name="template" required onchange="const o=this.selectedOptions[0];const ti=document.getElementById('title');if(!ti.dataset.touched)ti.value=o.dataset.title">
+      <option value="">—</option>{% for tp in tpls %}<option value="{{ tp.id }}" data-title="{{ tp.title_fr }}">{{ tp.code }} · {{ tp.title(lang) }} ({{ tp.hours }} h)</option>{% endfor %}</select></div>
+  {% endif %}
+  <div class="field full"><label for="title">{{ t('sess.title') }}</label><input class="input" id="title" name="title" value="{{ s.title if s }}" oninput="this.dataset.touched=1" required></div>
+  <div class="field"><label for="starts_on">{{ t('sess.start') }}</label><input class="input" type="date" id="starts_on" name="starts_on" value="{{ s.starts_on if s and s.starts_on }}" required></div>
+  <div class="field"><label for="ends_on">{{ t('sess.end') }}</label><input class="input" type="date" id="ends_on" name="ends_on" value="{{ s.ends_on if s and s.ends_on }}" required></div>
+  <div class="field"><label for="mode">{{ t('sess.mode') }}</label><select class="input" id="mode" name="mode">{% for m in ['onsite','hybrid','online'] %}<option value="{{ m }}" {{ 'selected' if s and s.mode == m }}>{{ t('mode.' ~ m) }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="seats">{{ t('sess.seats_per_group') }}</label><input class="input" type="number" min="1" id="seats" name="seats_per_group" value="{{ s.seats_per_group if s else 20 }}"></div>
+  <div class="field"><label for="minatt">{{ t('sess.min_att') }}</label><input class="input" type="number" min="0" max="100" id="minatt" name="min_attendance" value="{{ s.min_attendance if s else 80 }}"></div>
+  <div class="field"><label for="location">{{ t('sess.location') }}</label><input class="input" id="location" name="location" value="{{ s.location if s and s.location }}"></div>
+  <div class="field"><label for="online_url">{{ t('sess.online_url') }}</label><input class="input" id="online_url" name="online_url" dir="ltr" value="{{ s.online_url if s and s.online_url }}"></div>
+  <div class="field full"><label for="description">{{ t('sess.description') }}</label><textarea class="input" id="description" name="description">{{ s.description if s and s.description }}</textarea></div>
+  <label class="check full"><input type="checkbox" name="auto_confirm" value="1" {{ 'checked' if not s or s.auto_confirm }}> {{ t('sess.auto_confirm') }}</label>
+</div>

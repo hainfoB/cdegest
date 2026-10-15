@@ -1,0 +1,55 @@
+{% from "partials/icons.html" import icon %}
+
+{% macro status_pill(st) -%}
+<span class="stp st-{{ st }}-p"><i class="st st-{{ st }}"></i>{{ t('obj.' ~ st) }}</span>
+{%- endmacro %}
+
+{% macro sess_badge(s) -%}
+<span class="badge b-{{ s.status }}">{{ t('sess.st.' ~ s.status) }}</span>
+{%- endmacro %}
+
+{% macro nesda_badge(s) -%}
+{% set cls = {'none':'b-draft','submitted':'b-wait','wilaya_ok':'b-wait','validated':'b-ok','rejected':'b-bad'}[s.nesda_status] %}
+<span class="badge {{ cls }}">{{ icon('shield', 13) }} {{ t('nesda.st.' ~ s.nesda_status) }}</span>
+{%- endmacro %}
+
+{% macro kpi_card(k, values, targets, per, icons, show_target=True) -%}
+{% set v = values.get(k) %}{% set tg = targets.get(k) if targets else None %}{% set st = per.get(k, 'none') if per else 'none' %}
+<div class="kpi ks-{{ st }}">
+  <div class="top"><span class="lbl">{{ t('kpi.' ~ k) }}</span>{{ icon(icons[k], 20) }}</div>
+  <div class="val{{ ' has' if v is not none }}">{{ fmt(k, v) }}</div>
+  {% if show_target %}
+  <div class="tg"><span style="white-space:nowrap">{{ t('kpi.target') }} : {{ fmt(k, tg) if tg is not none else t('kpi.none') }}</span>
+    {% if st != 'none' %}<span class="badge st-{{ st }}-p">{{ t('obj.' ~ st) }}</span>{% endif %}</div>
+  {% set pct = ((v or 0) / tg * 100) if tg else 0 %}
+  {% if k in ('dropout_rate', 'dropouts') and tg %}{% set pct = (100 if (v or 0) <= tg else (tg / v * 100)) %}{% endif %}
+  <div class="bar"><i style="width:{{ [pct, 100]|min|round(0) }}%"></i></div>
+  {% endif %}
+</div>
+{%- endmacro %}
+
+{% macro kpi_families(families, values, targets, per, icons, only=None, show_target=True) -%}
+{% for fam, keys in families %}{% if not only or fam in only %}
+<section class="fam" aria-labelledby="fam-{{ fam }}">
+  <h2 id="fam-{{ fam }}">{{ t('kpi.family.' ~ fam) }}</h2>
+  <div class="kpis">{% for k in keys %}{{ kpi_card(k, values, targets, per, icons, show_target) }}{% endfor %}</div>
+</section>
+{% endif %}{% endfor %}
+{%- endmacro %}
+
+{% macro period_bar(period, years, endpoint, extra={}) -%}
+<form class="periodbar noprint" method="get" action="{{ url_for(endpoint, **extra) }}">
+  {% for k, v in extra.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <input type="hidden" name="p" value="{{ period.code }}">
+  <select name="y" onchange="this.form.submit()" aria-label="{{ t('period.year') }}">
+    {% for y in years %}<option value="{{ y }}" {{ 'selected' if y == period.year }}>{{ y }}</option>{% endfor %}
+  </select>
+  <span class="seg">{% for c in ['S1','S2','A'] %}<a href="{{ url_for(endpoint, y=period.year, p=c, **extra) }}" class="{{ 'on' if period.code == c }}">{{ t('period.' ~ c) }}</a>{% endfor %}</span>
+</form>
+{%- endmacro %}
+
+{% macro flashes() -%}
+{% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, m in msgs %}
+<div class="flash flash-{{ cat }}" role="status">{{ icon('info', 18) }}<span>{{ m|safe if cat == 'pwd' else m }}</span></div>
+{% endfor %}{% endwith %}
+{%- endmacro %}

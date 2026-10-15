@@ -1,0 +1,14 @@
+{% extends "public/_layout.html" %}
+{% block title %}{{ t('nav.program') }}{% endblock %}
+{% block pub %}
+<h1 style="font:800 32px var(--fa);margin-bottom:6px">{{ t('pub.cat_title') }}</h1>
+<p class="muted" style="margin-bottom:18px">{{ t('pub.cat_hint') }}</p>
+<form method="get" class="row" style="margin-bottom:18px"><select class="input sm" name="w" style="width:auto" onchange="this.form.submit()" aria-label="{{ t('dash.table.wilaya') }}"><option value="">{{ t('pub.all_wilayas') }}</option>{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if wcode == w.code }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></form>
+<div class="stack">{% for s in rows %}
+<article class="sesscard">
+  <div class="row between"><span class="badge b-open">{{ s.template.theme if s.template }} · {{ t('kind.' ~ s.template.kind) if s.template }}</span><span class="muted">{{ s.institute.wilaya.name(lang) }}</span></div>
+  <h3>{{ s.template.title(lang) if s.template else s.title }}</h3>
+  <p class="muted">{{ s.institute.name(lang) }} · {{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }} · {{ t('mode.' ~ s.mode) }}</p>
+  <div class="row between"><span><b>{{ [s.seats_total - s.confirmed|length, 0]|max }}</b> {{ t('pub.seats_left') }}</span><a class="btn btn-cde btn-sm" href="{{ url_for('public.register', slug=s.slug) }}">{{ t('cta.register') }}</a></div>
+</article>{% else %}<p class="empty">{{ t('pub.none_open') }}</p>{% endfor %}</div>
+{% endblock %}

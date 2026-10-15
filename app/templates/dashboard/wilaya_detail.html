@@ -1,0 +1,21 @@
+{% extends "app.html" %}
+{% from "partials/ui.html" import kpi_families, period_bar, status_pill with context %}
+{% block title %}{{ w.name(lang) }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <p><a href="{{ url_for('main.dashboard', y=period.year, p=period.code) }}">{{ back }} {{ t('cmp.back') }}</a></p>
+    <h1><span class="code" style="font-size:20px">{{ w.code }}</span> {{ w.name(lang) }}</h1>
+    <p>{{ t('obj.status') }} : {{ status_pill(status) }}</p>
+  </div>
+  {{ period_bar(period, years, 'main.wilaya_detail', {'code': w.code}) }}
+</div>
+{{ kpi_families(families, values, targets, per, icons) }}
+<div class="panel"><h2>{{ t('nat.cde') }}</h2>
+{% if rows %}
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('kpi.groups') }}</th><th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.hours') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.certificates') }}</th><th>{{ t('kpi.conversion') }}</th><th>{{ t('obj.status') }}</th></tr></thead>
+<tbody>{% for r in rows %}{% set v = r['values'] %}<tr><td class="code">{{ r.institute.code }}</td><td><b>{{ r.institute.name(lang) }}</b></td>
+<td class="num">{{ fmt('groups', v.groups) }}</td><td class="num">{{ fmt('trained', v.trained) }}</td><td class="num">{{ fmt('hours', v.hours) }}</td><td class="num">{{ fmt('attendance', v.attendance) }}</td><td class="num">{{ fmt('certificates', v.certificates) }}</td><td class="num">{{ fmt('conversion', v.conversion) }}</td><td>{{ status_pill(r.status) }}</td></tr>{% endfor %}</tbody></table>
+{% else %}<p class="empty">{{ t('nat.no_cde') }}</p>{% endif %}
+</div>
+{% endblock %}

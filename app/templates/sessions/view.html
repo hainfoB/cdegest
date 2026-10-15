@@ -1,0 +1,216 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import sess_badge, nesda_badge with context %}
+{% block title %}{{ s.title }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <p class="muted">{{ s.institute.code }} · {{ s.template.code if s.template }}</p>
+    <h1>{{ s.title }}</h1>
+    <div class="statusline" style="margin-top:8px">{{ sess_badge(s) }} {{ nesda_badge(s) }}<span class="muted">{{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }}</span></div>
+  </div>
+  <div class="row noprint">
+    <a class="btn btn-sm btn-line" href="{{ url_for('sessions.export', sid=s.id) }}">{{ icon('file', 16) }} Excel</a>
+    {% if s.status == 'open' %}<a class="btn btn-sm btn-line" href="{{ url_for('public.register', slug=s.slug) }}" target="_blank">{{ icon('globe', 16) }} {{ t('sess.public_link') }}</a>{% endif %}
+  </div>
+</div>
+
+{% set steps = ['draft','open','running','closed'] %}
+<div class="steps" aria-label="{{ t('sess.status') }}">
+  {% for x in steps %}{% set i = steps.index(x) %}{% set cur = steps.index(s.status) %}
+  <span class="{{ 'now' if i == cur else ('done' if i < cur) }}">{{ loop.index }}. {{ t('sess.st.' ~ x) }}</span>{% endfor %}
+  <span class="{{ 'now' if s.nesda_status in ('submitted','wilaya_ok') else ('done' if s.nesda_status == 'validated') }}">5. {{ t('nesda.step') }}</span>
+  <span class="{{ 'done' if s.certificates_open }}">6. {{ t('nav.certificates') }}</span>
+</div>
+
+<nav class="tabs" style="margin-top:18px">
+  {% for k in ['apercu','modules','planning','inscrits','presence','attestations'] %}
+  <a href="{{ url_for('sessions.view', sid=s.id, tab=k) }}" class="{{ 'on' if tab == k }}">{{ t('tab.' ~ k) }}</a>{% endfor %}
+</nav>
+
+{% if tab == 'apercu' %}
+<div class="grid2">
+  <div class="panel">
+    <h2>{{ t('tab.apercu') }}</h2>
+    <dl class="kv">
+      <dt>{{ t('dash.table.institute') }}</dt><dd>{{ s.institute.name(lang) }}</dd>
+      <dt>{{ t('sess.mode') }}</dt><dd>{{ t('mode.' ~ s.mode) }}</dd>
+      <dt>{{ t('sess.location') }}</dt><dd>{{ s.location or '—' }}</dd>
+      <dt>{{ t('sess.groups') }}</dt><dd>{{ s.groups|length }} × {{ s.seats_per_group }} {{ t('sess.places') }}</dd>
+      <dt>{{ t('sess.modules') }}</dt><dd>{{ s.modules|length }} · {{ s.modules|sum(attribute='hours') }} h</dd>
+      <dt>{{ t('sess.teachers') }}</dt><dd>{{ s.teacher_ids()|length }}</dd>
+      <dt>{{ t('sess.enrolled') }}</dt><dd>{{ s.confirmed|length }} / {{ s.seats_total }}</dd>
+      <dt>{{ t('sess.min_att') }}</dt><dd>{{ s.min_attendance }} %</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h2>{{ t('sess.next_step') }}</h2>
+    {% if manage %}
+      {% if s.status == 'draft' %}
+        <p class="muted">{{ t('sess.hint.draft') }}</p>
+        <form method="post" action="{{ url_for('sessions.action', sid=s.id) }}" class="row" style="margin-top:12px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-cde" name="action" value="open">{{ t('sess.do.open') }}</button>
+          {% if not s.enrollments %}<button class="btn btn-bad" name="action" value="delete">{{ t('delete') }}</button>{% endif %}</form>
+      {% elif s.status == 'open' %}
+        <p class="muted">{{ t('sess.hint.open') }}</p>
+        <form method="post" action="{{ url_for('sessions.action', sid=s.id) }}" class="row" style="margin-top:12px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-cde" name="action" value="start">{{ t('sess.do.start') }}</button></form>
+      {% elif s.status == 'running' %}
+        <p class="muted">{{ t('sess.hint.running') }}</p>
+        <form method="post" action="{{ url_for('sessions.action', sid=s.id) }}" class="row" style="margin-top:12px" data-confirm="{{ t('sess.confirm_close') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-line" name="action" value="dropouts" formnovalidate>{{ t('sess.do.dropouts') }}</button>
+          <button class="btn btn-ink" name="action" value="close">{{ t('sess.do.close') }}</button></form>
+      {% elif s.nesda_status in ('none', 'rejected') %}
+        {% if s.nesda_status == 'rejected' %}<div class="flash flash-err">{{ icon('info', 18) }}<span><b>{{ t('nesda.rejected_by') }}</b> {{ s.nesda_note }}</span></div>{% endif %}
+        <p class="muted">{{ t('sess.hint.closed') }}</p>
+        <form method="post" action="{{ url_for('sessions.action', sid=s.id) }}" class="row" style="margin-top:12px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-cde" name="action" value="submit_nesda">{{ icon('shield', 16) }} {{ t('sess.do.submit_nesda') }}</button></form>
+      {% elif s.nesda_status in ('submitted','wilaya_ok') %}
+        <p class="muted">{{ t('sess.hint.waiting_nesda') }}</p>
+      {% else %}
+        <p class="muted">{{ t('sess.hint.validated') }}</p>
+        <a class="btn btn-cde" style="margin-top:12px" href="{{ url_for('sessions.view', sid=s.id, tab='attestations') }}">{{ icon('award', 16) }} {{ t('nav.certificates') }}</a>
+      {% endif %}
+    {% else %}
+      <p class="muted">{{ t('sess.readonly') }}</p>
+    {% endif %}
+  </div>
+</div>
+{% if manage and s.status in ('draft','open') %}
+<form class="panel form" method="post" action="{{ url_for('sessions.edit', sid=s.id) }}" style="margin-top:18px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><h2>{{ t('edit') }}</h2>
+  {% include "sessions/_fields.html" %}
+  <div class="row end"><button class="btn btn-cde btn-sm" type="submit">{{ t('save') }}</button></div>
+</form>
+{% endif %}
+
+{% elif tab == 'modules' %}
+<div class="panel">
+  <h2>{{ t('sess.modules') }}</h2>
+  <p class="muted" style="margin-bottom:12px">{{ t('mod.rule') }}</p>
+  <table class="tbl"><thead><tr><th>#</th><th>{{ t('mod.title') }}</th><th>{{ t('mod.hours') }}</th><th>{{ t('mod.supervisor') }}</th>{% if manage %}<th></th>{% endif %}</tr></thead>
+  <tbody>{% for m in s.modules %}<tr><td>{{ m.order }}</td><td><b>{{ m.title }}</b></td><td class="num">{{ m.hours }} h</td><td>{{ m.supervisor.name }}</td>
+  {% if manage %}<td class="actions"><form method="post" action="{{ url_for('sessions.modules', sid=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ m.id }}"><button class="btn btn-sm btn-bad" name="action" value="delete">{{ t('delete') }}</button></form></td>{% endif %}</tr>
+  {% else %}<tr><td colspan="5" class="empty">{{ t('mod.none') }}</td></tr>{% endfor %}</tbody></table>
+  {% if manage %}
+  <form method="post" action="{{ url_for('sessions.modules', sid=s.id) }}" class="row" style="margin-top:16px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input class="input sm" name="title" placeholder="{{ t('mod.title') }}" required style="flex:2;min-width:200px">
+    <input class="input sm" name="hours" type="number" min="1" value="3" style="width:90px" aria-label="{{ t('mod.hours') }}">
+    <select class="input sm" name="supervisor" required style="flex:1;min-width:180px" aria-label="{{ t('mod.supervisor') }}"><option value="">{{ t('mod.supervisor') }}…</option>{% for u in teachers %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select>
+    <button class="btn btn-cde btn-sm">+ {{ t('mod.add') }}</button>
+  </form>
+  {% endif %}
+</div>
+<div class="panel" style="margin-top:18px"><h2>{{ t('sess.teachers') }}</h2>
+  <table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('mod.supervised') }}</th><th>{{ t('mod.slots') }}</th></tr></thead><tbody>
+  {% for u in teachers if u.id in s.teacher_ids() %}<tr><td><b>{{ u.name }}</b></td>
+    <td>{{ s.modules|selectattr('supervisor_id','equalto',u.id)|map(attribute='title')|join(', ') or '—' }}</td>
+    <td class="num">{% set n = namespace(c=0) %}{% for g in s.groups %}{% for sl in g.slots if sl.teacher_id == u.id %}{% set n.c = n.c + 1 %}{% endfor %}{% endfor %}{{ n.c }}</td></tr>{% endfor %}
+  </tbody></table></div>
+
+{% elif tab == 'planning' %}
+{% for g in s.groups %}
+<div class="panel" style="margin-bottom:16px">
+  <div class="panelhead"><h2>{{ t('grp.group') }} {{ g.name }} <small class="muted">{{ g.room or '' }} · {{ g.enrollments|selectattr('status','equalto','confirmed')|list|length }} {{ t('sess.enrolled')|lower }}</small></h2>
+    {% if manage and s.groups|length > 1 %}<form method="post" action="{{ url_for('sessions.groups', sid=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ g.id }}"><button class="btn btn-sm btn-bad" name="action" value="delete">{{ t('delete') }}</button></form>{% endif %}</div>
+  <table class="tbl"><thead><tr><th>{{ t('slot.day') }}</th><th>{{ t('slot.time') }}</th><th>{{ t('mod.title') }}</th><th>{{ t('slot.teacher') }}</th><th>{{ t('nav.attendance') }}</th>{% if manage %}<th></th>{% endif %}</tr></thead>
+  <tbody>{% for sl in g.slots %}<tr class="{{ 'dim' if sl.day > today }}"><td>{{ sl.day|d }}</td><td>{{ sl.start }}–{{ sl.end }}</td><td>{{ sl.module.title }}</td><td>{{ sl.teacher.name }}</td>
+    <td>{% if sl.called_at %}<span class="badge b-ok">{{ t('call.done') }}</span>{% elif sl.day < today %}<span class="badge b-bad">{{ t('call.missing') }}</span>{% elif sl.day == today %}<a class="badge b-open" href="{{ url_for('sessions.roll_call', slot_id=sl.id) }}">{{ t('call.do') }}</a>{% else %}<span class="badge b-draft">{{ t('call.later') }}</span>{% endif %}
+      {% if sl.day <= today %} <a href="{{ url_for('sessions.roll_call', slot_id=sl.id) }}" class="muted" style="font-size:13px">{{ t('see') }}</a>{% endif %}</td>
+    {% if manage %}<td class="actions">{% if not sl.attendances %}<form method="post" action="{{ url_for('sessions.slots', sid=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ sl.id }}"><button class="btn btn-sm btn-bad" name="action" value="delete" aria-label="{{ t('delete') }}">×</button></form>{% endif %}</td>{% endif %}</tr>
+  {% else %}<tr><td colspan="6" class="empty">{{ t('slot.none') }}</td></tr>{% endfor %}</tbody></table>
+</div>
+{% endfor %}
+{% if manage %}
+<div class="grid2">
+<form class="panel form" method="post" action="{{ url_for('sessions.slots', sid=s.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><h2>{{ t('slot.add') }}</h2>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('mod.title') }}</label><select class="input sm" name="module" required>{% for m in s.modules %}<option value="{{ m.id }}">{{ m.order }}. {{ m.title }}</option>{% endfor %}</select></div>
+    <div class="field"><label>{{ t('slot.teacher') }}</label><select class="input sm" name="teacher" required>{% for u in teachers %}<option value="{{ u.id }}">{{ u.name }}{% if not s.modules|selectattr('supervisor_id','equalto',u.id)|list %} ({{ t('slot.no_module') }}){% endif %}</option>{% endfor %}</select></div>
+    <div class="field"><label>{{ t('slot.day') }}</label><input class="input sm" type="date" name="day" required></div>
+    <div class="field"><label>{{ t('slot.start') }}</label><input class="input sm" type="time" name="start" value="09:00" required></div>
+    <div class="field"><label>{{ t('slot.end') }}</label><input class="input sm" type="time" name="end" value="12:00" required></div>
+    <div class="field"><label>{{ t('slot.repeat') }}</label><input class="input sm" type="number" name="repeat" min="1" max="20" value="1"></div>
+    <div class="field full"><label>{{ t('sess.groups') }}</label><div class="row">{% for g in s.groups %}<label class="check" style="margin:0"><input type="checkbox" name="groups" value="{{ g.id }}" checked> {{ g.name }}</label>{% endfor %}</div></div>
+  </div>
+  <p class="hint">{{ t('mod.rule') }}</p>
+  <div class="row end"><button class="btn btn-cde btn-sm">+ {{ t('slot.add') }}</button></div>
+</form>
+<form class="panel form" method="post" action="{{ url_for('sessions.groups', sid=s.id) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><h2>{{ t('grp.add') }}</h2>
+  <div class="fgrid"><div class="field"><label>{{ t('grp.name') }}</label><input class="input sm" name="name" placeholder="G{{ s.groups|length + 1 }}"></div>
+  <div class="field"><label>{{ t('grp.room') }}</label><input class="input sm" name="room"></div></div>
+  <div class="row end"><button class="btn btn-cde btn-sm">+ {{ t('grp.add') }}</button></div>
+</form>
+</div>
+{% endif %}
+
+{% elif tab == 'inscrits' %}
+<div class="panel">
+  <div class="panelhead"><h2>{{ t('sess.enrolled') }} <small class="muted">{{ s.confirmed|length }} / {{ s.seats_total }}</small></h2></div>
+  {% if sees_people %}
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('pub.phone') }}</th><th>{{ t('enr.status') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.dropouts') }}</th>{% if manage %}<th></th>{% endif %}</tr></thead>
+  <tbody>{% for e in enrs %}{% set p = e.participant %}{% set st = stats[e.id] %}<tr class="{{ 'dim' if e.status == 'cancelled' }}">
+    <td><b>{{ p.full_name }}</b><br><small class="muted">{{ p.specialty or '' }} · {{ t('pstatus.' ~ p.status) }}</small></td>
+    <td>{% if manage and e.status != 'cancelled' %}<form method="post" action="{{ url_for('sessions.enrollments', sid=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ e.id }}"><input type="hidden" name="action" value="group"><select class="input sm" name="group" onchange="this.form.submit()" style="width:auto" aria-label="{{ t('grp.group') }}">{% for g in s.groups %}<option value="{{ g.id }}" {{ 'selected' if e.group_id == g.id }}>{{ g.name }}</option>{% endfor %}</select></form>{% else %}{{ e.group.name if e.group else '—' }}{% endif %}</td>
+    <td dir="ltr" style="text-align:start">{{ p.phone }} {% if p.phone|wa %}<a href="{{ p.phone|wa }}" target="_blank" rel="noopener" class="badge b-open">WhatsApp</a>{% endif %}</td>
+    <td><span class="badge {{ {'confirmed':'b-ok','pending':'b-wait','waitlist':'b-wait','cancelled':'b-draft'}[e.status] }}">{{ t('enr.st.' ~ e.status) }}</span></td>
+    <td class="num">{{ st.rate ~ ' %' if st.rate is not none else '—' }} <small class="muted">({{ st.present }}/{{ st.expected }})</small></td>
+    <td>{% if e.dropout %}<span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% endif %}</td>
+    {% if manage %}<td class="actions"><form method="post" action="{{ url_for('sessions.enrollments', sid=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ e.id }}">
+      {% if e.status in ('pending','waitlist') %}<button class="btn btn-sm btn-cde" name="action" value="confirm">{{ t('enr.confirm') }}</button>{% endif %}
+      {% if e.status == 'confirmed' and not e.dropout and s.status != 'closed' %}<button class="btn btn-sm btn-line" name="action" value="desist">{{ t('enr.desist') }}</button>{% endif %}
+      {% if e.dropout and s.status != 'closed' %}<button class="btn btn-sm btn-line" name="action" value="undrop">{{ t('enr.undrop') }}</button>{% endif %}
+      {% if e.status != 'cancelled' and s.status in ('draft','open') %}<button class="btn btn-sm btn-bad" name="action" value="cancel">{{ t('cancel') }}</button>{% endif %}
+      <a class="btn btn-sm btn-line" href="{{ url_for('public.ticket', token=e.token) }}" target="_blank">{{ t('enr.ticket') }}</a></form></td>{% endif %}
+  </tr>{% else %}<tr><td colspan="7" class="empty">{{ t('enr.none') }}</td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+</div>
+{% if manage and s.status != 'closed' %}
+<form class="panel form" method="post" action="{{ url_for('sessions.enrollments', sid=s.id) }}" style="margin-top:18px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add"><h2>{{ t('enr.add') }}</h2>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('pub.last_name') }}</label><input class="input sm" name="last_name" required></div>
+    <div class="field"><label>{{ t('pub.first_name') }}</label><input class="input sm" name="first_name" required></div>
+    <div class="field"><label>{{ t('pub.phone') }}</label><input class="input sm" name="phone" dir="ltr" required></div>
+    <div class="field"><label>{{ t('pub.sex') }}</label><select class="input sm" name="sex"><option value="F">{{ t('sex.F') }}</option><option value="M">{{ t('sex.M') }}</option></select></div>
+    <div class="field"><label>{{ t('pub.pstatus') }}</label><select class="input sm" name="pstatus"><option value="stagiaire">{{ t('pstatus.stagiaire') }}</option><option value="diplome">{{ t('pstatus.diplome') }}</option></select></div>
+    <div class="field"><label>{{ t('pub.specialty') }}</label><input class="input sm" name="specialty"></div>
+  </div>
+  <p class="hint">{{ t('enr.consent_hint') }}</p>
+  <div class="row end"><button class="btn btn-cde btn-sm">+ {{ t('enr.add') }}</button></div>
+</form>
+{% endif %}
+
+{% elif tab == 'presence' %}
+<div class="tabs" style="margin-bottom:12px">{% for g in s.groups %}<a href="{{ url_for('sessions.view', sid=s.id, tab='presence', g=g.id) }}" class="{{ 'on' if group and g.id == group.id }}">{{ g.name }}</a>{% endfor %}</div>
+{% if group and sees_people %}
+<div class="panel" style="overflow-x:auto">
+  <table class="tbl matrix"><thead><tr><th>{{ t('users.name') }}</th>{% for sl in group.slots %}<th title="{{ sl.module.title }} — {{ sl.teacher.name }}"><a href="{{ url_for('sessions.roll_call', slot_id=sl.id) }}">{{ sl.day.strftime('%d/%m') }}</a><br><small class="muted">M{{ sl.module.order }}</small></th>{% endfor %}<th>%</th></tr></thead>
+  <tbody>{% for e in enrs if e.group_id == group.id and e.status == 'confirmed' %}{% set st = stats[e.id] %}<tr>
+    <td><b>{{ e.participant.full_name }}</b>{% if e.dropout %} <span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% endif %}</td>
+    {% for sl in group.slots %}{% set a = st.marks.get(sl.id) %}<td>{% if a %}<span class="m m-{{ a.status }}" title="{{ t('att.' ~ a.status) }}{{ ' · ' ~ t('att.corrected') if a.corrected }}">{{ t('att.short.' ~ a.status) }}</span>{% elif sl.day <= today %}<span class="m m-none">·</span>{% else %}<span class="m m-none"></span>{% endif %}</td>{% endfor %}
+    <td class="num"><b>{{ st.rate ~ '%' if st.rate is not none else '—' }}</b></td></tr>{% endfor %}</tbody></table>
+  <p class="muted" style="margin-top:10px">{% for k in ['present','late','absent','excused'] %}<span class="m m-{{ k }}">{{ t('att.short.' ~ k) }}</span> {{ t('att.' ~ k) }} &nbsp; {% endfor %}</p>
+</div>
+{% endif %}
+
+{% elif tab == 'attestations' %}
+<div class="panel">
+  <div class="panelhead"><div><h2>{{ t('nav.certificates') }}</h2><p class="muted">{{ t('cert.rule', n=s.min_attendance) }}</p></div>
+    {% if can_print %}<a class="btn btn-cde" href="{{ url_for('sessions.certificates', sid=s.id) }}" target="_blank">{{ icon('award', 16) }} {{ t('cert.print_all') }}</a>{% endif %}</div>
+  {% if not s.certificates_open %}<div class="flash flash-err">{{ icon('lock', 18) }}<span>{{ t('cert.locked') }}</span></div>{% endif %}
+  {% if sees_people %}
+  <table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('cert.eligible') }}</th><th>{{ t('cert.number') }}</th><th></th></tr></thead>
+  <tbody>{% for e in enrs if e.status == 'confirmed' %}{% set st = stats[e.id] %}<tr>
+    <td><b>{{ e.participant.full_name }}</b></td><td>{{ e.group.name if e.group }}</td>
+    <td class="num">{{ st.rate ~ ' %' if st.rate is not none else '—' }}</td>
+    <td>{% if elig[e.id] %}<span class="badge b-ok">{{ t('yes') }}</span>{% elif e.dropout %}<span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% else %}<span class="badge b-draft">{{ t('no') }}</span>{% endif %}</td>
+    <td class="code">{{ e.cert_no or '—' }}</td>
+    <td class="actions">{% if can_print and e.cert_no %}<a class="btn btn-sm btn-line" target="_blank" href="{{ url_for('sessions.certificates', sid=s.id, e=e.id) }}">{{ t('cert.print') }}</a>{% endif %}</td></tr>{% endfor %}</tbody></table>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

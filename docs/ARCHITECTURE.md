@@ -1,7 +1,7 @@
 # CDEgest — Dossier d'architecture (Étape 1)
 
 > Plateforme de gestion du réseau des Centres de développement de l'entrepreneuriat (CDE) : de l'institut (INSFP) à la wilaya (DFEP), jusqu'au ministère (MFEP).
-> Version 1.5 — 8 octobre 2026 — à valider avant l'étape 2.
+> Version 2.0 — 15 octobre 2026 (application complète) — 8 octobre 2026 — à valider avant l'étape 2.
 
 ---
 
@@ -42,6 +42,8 @@ MFEP (national)
 | `dfep` | DFEP de wilaya | Sa wilaya (mêmes droits que le coordinateur, plus la validation) | `dfep.bba@cdegest.dz` |
 | `coord` | Coordinateur CDE de wilaya | Sa wilaya | `coord.bba@cdegest.dz` |
 | `resp` | Responsable CDE de l'institut | Son institut | `resp.insfp-bba01@cdegest.dz` |
+| `nesda` | Représentant NESDA de wilaya | Sa wilaya : valide la présence, saisit la suite des dossiers | `nesda.bba@cdegest.dz` |
+| `nesda_dg` | NESDA — Direction générale | National : supervision, validation de secours ou seconde validation | `dg.nesda@cdegest.dz` |
 | `formateur` | Enseignant intervenant | Les modules qu'il supervise et les créneaux qu'il anime ; **fait l'appel** dans ses séances | `formateur.bba01@cdegest.dz` |
 
 Les participants n'ont pas de compte : ils s'inscrivent par lien public et reçoivent un **ticket personnel** (lien secret + QR) qui donne accès à leurs présences et à leur attestation.
@@ -114,6 +116,17 @@ Règles :
 - Chaque enseignant affecté à une session **supervise au moins un module** : la session ne peut pas être ouverte aux inscriptions tant qu'un intervenant n'a aucun module.
 - Un module a **un seul superviseur**, mais peut être animé par d'autres intervenants selon les groupes (le superviseur reste responsable du contenu et du suivi).
 - La présence est enregistrée par créneau, donc les heures se ventilent automatiquement par module, par groupe et par enseignant.
+
+### 4.3 bis Validation NESDA de la présence (préalable à l'attestation)
+```
+Session clôturée (CDE) → soumise à la NESDA → représentant NESDA de la wilaya : valide ou renvoie (motif obligatoire)
+   [option NESDA_DG_VALIDATION=1 : seconde validation par la DG NESDA]
+→ présence validée → numéros d'attestation attribués → attestations imprimables au CDE (responsable, coordinateur, DFEP)
+```
+- Le représentant NESDA voit les listes nominatives de sa wilaya, le nombre de créneaux sans appel et les corrections faites après coup.
+- La DG NESDA a une vue nationale et peut valider à la place d'un représentant absent.
+- Le participant ne peut pas imprimer lui-même : son ticket indique que l'attestation est à retirer au CDE ; chaque attestation porte un QR de vérification publique.
+- Suite des dossiers : le CDE déclare le dépôt ; « accepté » et « abouti » sont saisis par la NESDA (source des indicateurs de conversion).
 
 ### 4.4 L'appel par l'enseignant
 L'enseignant ouvre sa séance (seulement le jour même, seulement ses créneaux) et voit la liste nominative du groupe :
@@ -280,3 +293,24 @@ cdegest/
 3. Le circuit de remontée des rapports (section 4.2).
 4. Les 15 indicateurs et la règle de détection des abandons (section 5).
 5. Les wilayas de comparaison : Sétif et M'Sila avec données fictives.
+
+
+---
+
+## 10. Ce qui est livré (v2.0)
+
+| Module | Écrans |
+|---|---|
+| Tableaux de bord | National (69 wilayas, statut des objectifs, filtres), wilaya, CDE, enseignant, NESDA wilaya, DG NESDA ; sélection année / S1 / S2 |
+| Comparaison | 2 à 5 wilayas sur les 15 indicateurs avec cible et statut |
+| Référentiel | Catalogue national des formations (MFEP) |
+| Objectifs | Saisie MFEP par wilaya (S1, S2, année), copie vers toutes les wilayas, répartition par CDE (DFEP / coordinateur) avec contrôle des sommes |
+| Programme annuel | Lignes formation × CDE × semestre, soumission, validation ou renvoi par la DFEP, suivi prévu / réalisé |
+| Sessions | Modules (superviseur unique), groupes, créneaux répétables, règle « chaque intervenant supervise un module », inscriptions, liste d'attente, export Excel |
+| Présence | Appel par l'enseignant le jour même (mobile), code en ligne, matrice de présence, corrections tracées, détection des abandons |
+| NESDA | File de validation, examen des listes, validation / renvoi, suite des dossiers des formés |
+| Attestations | Bilingues, QR de vérification, impression individuelle ou en lot au CDE |
+| Satisfaction | Questionnaire anonyme modifiable par le MFEP, résultats par session |
+| Rapports | Institut → wilaya → MFEP, figés à la transmission, export Excel et impression PDF |
+| Comptes | Création par périmètre, mot de passe provisoire à changer, activation, réinitialisation |
+| Public | Catalogue, inscription, ticket QR, questionnaire, vérification d'attestation, API JSON et widget pour fp.cde.dz |

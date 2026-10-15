@@ -1,0 +1,22 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.nesda_people') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.nesda_people') }}</h1><p>{{ t('nesda.people_hint') if full else t('nesda.people_hint_cde') }}</p></div></div>
+<div class="minicards" style="margin-bottom:18px">
+  <a class="mc {{ 'today' if not st }}" href="{{ url_for('nesda.participants') }}"><small>{{ t('obj.all') }}</small><span class="big-n">{{ total }}</span></a>
+  {% for k in statuses %}<a class="mc {{ 'today' if st == k }}" href="{{ url_for('nesda.participants', st=k) }}"><small>{{ t('ns.' ~ k) }}</small><span class="big-n">{{ counts[k] }}</span></a>{% endfor %}
+</div>
+<div class="panel">
+  <form class="tools" method="get"><input type="hidden" name="st" value="{{ st or '' }}">
+    <label class="searchbox">{{ icon('search', 18) }}<input type="search" name="q" value="{{ q }}" placeholder="{{ t('nesda.search') }}" aria-label="{{ t('nesda.search') }}"></label></form>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('pub.phone') }}</th><th>{{ t('nesda.trainings') }}</th><th>{{ t('nesda.status') }}</th><th>{{ t('nesda.since') }}</th></tr></thead>
+  <tbody>{% for p in rows %}<tr><td><b>{{ p.full_name }}</b><br><small class="muted">{{ p.specialty or '' }} · {{ t('pstatus.' ~ p.status) }}</small></td>
+  <td dir="ltr" style="text-align:start">{{ p.phone }}</td>
+  <td><small>{% for e in p.enrollments %}{{ e.session.title }}{% if e.cert_no %} ✓{% endif %}{{ ', ' if not loop.last }}{% endfor %}</small></td>
+  <td><form method="post" action="{{ url_for('nesda.participants', st=st, q=q) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ p.id }}">
+    <select class="input sm" name="status" onchange="this.form.submit()" style="width:auto" aria-label="{{ t('nesda.status') }}" {{ 'disabled' if not full and p.nesda_status in ('accepte','abouti') }}>
+      {% for k in statuses %}<option value="{{ k }}" {{ 'selected' if p.nesda_status == k }} {{ 'disabled' if not full and k in ('accepte','abouti') }}>{{ t('ns.' ~ k) }}</option>{% endfor %}</select></form></td>
+  <td>{{ p.nesda_status_on|d }}</td></tr>{% else %}<tr><td colspan="5" class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+</div>
+{% endblock %}

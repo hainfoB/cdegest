@@ -8,6 +8,7 @@ pip install -q -r requirements.txt
 [ -f .env ] || flask --app wsgi init-local
 flask --app wsgi db upgrade
 flask --app wsgi seed-base
+flask --app wsgi seed-demo
 flask --app wsgi sync-passwords
 echo "CDEgest : http://localhost:5000  (accès : ACCES_LOCAL.txt)"
 flask --app wsgi run --port 5000

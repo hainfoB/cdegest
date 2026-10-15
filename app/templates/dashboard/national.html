@@ -1,0 +1,87 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import kpi_families, period_bar, status_pill, nesda_badge with context %}
+{% block title %}{{ t('nav.dashboard') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>{{ t('dash.hello', name=current_user.name) }}</h1>
+    <p>{{ t('dash.nesda_dg' if view == 'nesda_dg' else 'dash.national') }}</p>
+  </div>
+  {{ period_bar(period, years, 'main.dashboard') }}
+</div>
+
+<div class="scopecards">
+  <div class="sc"><span class="ib">{{ icon('globe', 22) }}</span><div><b>{{ n_wilayas }}</b><span>{{ t('dash.scope.wilayas') }}</span></div></div>
+  <div class="sc"><span class="ib">{{ icon('building', 22) }}</span><div><b>{{ n_inst }}</b><span>{{ t('nat.cde') }}</span></div></div>
+  <div class="sc"><span class="ib">{{ icon('target', 22) }}</span><div><b>{{ counts.met + counts.track }}<small style="font-size:15px;color:var(--mut)"> / {{ n_wilayas - counts.none }}</small></b><span>{{ t('nat.on_target') }}</span></div></div>
+  <div class="sc next">
+    {% if view == 'nesda_dg' %}
+      <small>{{ t('dash.next.title') }}</small><p>{{ t('dg.pending', n=pending|length) }}</p>
+      <a class="btn btn-sm btn-ink" href="{{ url_for('nesda.queue') }}">{{ t('nav.nesda_queue') }}</a>
+    {% else %}
+      <small>{{ t('obj.status') }} · {{ period.year }} {{ t('period.' ~ period.code) }}</small>
+      <p>{{ counts.met }} {{ t('obj.met')|lower }} · {{ counts.track }} {{ t('obj.track')|lower }} · {{ counts.late + counts.missed }} {{ t('nat.behind') }}</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if view == 'nesda_dg' %}
+  {{ kpi_families(families, values, targets, per, icons, only=['conversion','attendance']) }}
+{% else %}
+  {{ kpi_families(families, values, targets, per, icons) }}
+{% endif %}
+
+<form class="panel" method="get" action="{{ url_for('main.compare') }}" id="natForm">
+  <input type="hidden" name="y" value="{{ period.year }}"><input type="hidden" name="p" value="{{ period.code }}">
+  <div class="panelhead">
+    <div><h2>{{ t('nat.title') }}</h2><p class="muted">{{ t('cmp.pick') }}</p></div>
+    {% if view != 'nesda_dg' %}<button class="btn btn-cde" type="submit" id="cmpBtn" disabled>{{ icon('columns', 18) }} {{ t('cmp.btn') }} <span id="cmpN">(0/5)</span></button>{% endif %}
+  </div>
+  <div class="tools">
+    <label class="searchbox">{{ icon('search', 18) }}<input type="search" id="wq" placeholder="{{ t('nat.search') }}" aria-label="{{ t('nat.search') }}"></label>
+    <div class="chips" role="group" aria-label="{{ t('obj.status') }}">
+      {% for k in ['all','met','track','late','missed','none'] %}<button type="button" class="chip{{ ' on' if k == 'all' }}" data-f="{{ k }}"><i class="st st-{{ k }}"></i>{{ t('obj.' ~ k) }}{% if k != 'all' %} <b>{{ counts[k] }}</b>{% endif %}</button>{% endfor %}
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+  <table class="tbl" id="natTbl"><thead><tr>
+    {% if view != 'nesda_dg' %}<th style="width:36px"></th>{% endif %}
+    <th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.wilaya') }}</th><th>{{ t('nat.cde') }}</th>
+    {% if view == 'nesda_dg' %}
+      <th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.certificates') }}</th><th>{{ t('kpi.accepted') }}</th><th>{{ t('kpi.conversion') }}</th><th>{{ t('kpi.completed') }}</th>
+    {% else %}
+      <th>{{ t('kpi.groups') }}</th><th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.dropout_rate') }}</th><th>{{ t('kpi.conversion') }}</th>
+    {% endif %}
+    <th>{{ t('obj.status') }}</th></tr></thead>
+  <tbody>{% for r in rows %}{% set w = r.wilaya %}{% set v = r['values'] %}
+  <tr data-st="{{ r.status }}" data-n="{{ (w.name_fr ~ ' ' ~ w.name_ar ~ ' ' ~ w.code)|lower }}" class="{{ 'dim' if not r.n_inst }}">
+    {% if view != 'nesda_dg' %}<td><input type="checkbox" name="w" value="{{ w.code }}" class="wpick" aria-label="{{ w.name(lang) }}"></td>{% endif %}
+    <td class="code">{{ w.code }}</td>
+    <td><a href="{{ url_for('main.wilaya_detail', code=w.code, y=period.year, p=period.code) }}">{{ w.name(lang) }}</a></td>
+    <td class="num">{{ r.n_inst }}</td>
+    {% if view == 'nesda_dg' %}
+      <td class="num">{{ fmt('trained', v.trained) }}</td><td class="num">{{ fmt('certificates', v.certificates) }}</td><td class="num">{{ fmt('accepted', v.accepted) }}</td><td class="num">{{ fmt('conversion', v.conversion) }}</td><td class="num">{{ fmt('completed', v.completed) }}</td>
+    {% else %}
+      <td class="num">{{ fmt('groups', v.groups) }}</td><td class="num">{{ fmt('trained', v.trained) }}</td><td class="num">{{ fmt('attendance', v.attendance) }}</td><td class="num">{{ fmt('dropout_rate', v.dropout_rate) }}</td><td class="num">{{ fmt('conversion', v.conversion) }}</td>
+    {% endif %}
+    <td>{{ status_pill(r.status) }}</td></tr>{% endfor %}</tbody></table></div>
+  <p class="muted" id="cmpMax" hidden>{{ t('cmp.max') }}</p>
+</form>
+
+{% if view == 'nesda_dg' and pending %}
+<div class="panel" style="margin-top:20px"><h2>{{ t('nav.nesda_queue') }}</h2>
+<table class="tbl"><thead><tr><th>{{ t('sess.title') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('dash.table.wilaya') }}</th><th>{{ t('nesda.submitted_on') }}</th><th>{{ t('obj.status') }}</th></tr></thead>
+<tbody>{% for s in pending %}<tr><td><a href="{{ url_for('nesda.review', sid=s.id) }}">{{ s.title }}</a></td><td>{{ s.institute.code }}</td><td>{{ s.institute.wilaya.name(lang) }}</td><td>{{ s.nesda_submitted_at|dt }}</td><td>{{ nesda_badge(s) }}</td></tr>{% endfor %}</tbody></table></div>
+{% endif %}
+
+<script>
+(()=>{const f=document.getElementById('natForm');if(!f)return;const boxes=[...f.querySelectorAll('.wpick')],btn=document.getElementById('cmpBtn'),n=document.getElementById('cmpN');
+function upd(){if(!btn)return;const c=boxes.filter(b=>b.checked).length;n.textContent='('+c+'/5)';btn.disabled=c<2;boxes.forEach(b=>{if(!b.checked)b.disabled=c>=5});document.getElementById('cmpMax').hidden=c<5}
+boxes.forEach(b=>b.addEventListener('change',upd));
+let st='all';const q=document.getElementById('wq');
+function filt(){const v=q.value.trim().toLowerCase();f.querySelectorAll('#natTbl tbody tr').forEach(r=>{r.hidden=!(r.dataset.n.includes(v)&&(st==='all'||r.dataset.st===st))})}
+q.addEventListener('input',filt);
+f.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{f.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');st=c.dataset.f;filt()}));})();
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import sess_badge, nesda_badge with context %}
+{% block title %}{{ t('nav.sessions') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{{ t('nav.sessions') }}</h1><p>{{ scope_label }}</p></div>
+  {% if can_create %}<a class="btn btn-cde" href="{{ url_for('sessions.create') }}">+ {{ t('sess.new') }}</a>{% endif %}
+</div>
+<div class="tabs">
+  <a href="{{ url_for('sessions.index') }}" class="{{ 'on' if not st }}">{{ t('obj.all') }}</a>
+  {% for x in statuses %}<a href="{{ url_for('sessions.index', st=x) }}" class="{{ 'on' if st == x }}">{{ t('sess.st.' ~ x) }}</a>{% endfor %}
+</div>
+<div class="panel">
+{% if rows %}
+<table class="tbl"><thead><tr><th>{{ t('sess.title') }}</th>{% if current_user.role != 'resp' %}<th>{{ t('dash.table.institute') }}</th>{% endif %}<th>{{ t('sess.dates') }}</th><th>{{ t('sess.groups') }}</th><th>{{ t('sess.enrolled') }}</th><th>{{ t('sess.status') }}</th><th>NESDA</th></tr></thead>
+<tbody>{% for s in rows %}<tr>
+<td><a href="{{ url_for('sessions.view', sid=s.id) }}">{{ s.title }}</a><br><small class="muted">{{ s.template.code if s.template }}</small></td>
+{% if current_user.role != 'resp' %}<td class="code">{{ s.institute.code }}</td>{% endif %}
+<td>{{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }}</td><td class="num">{{ s.groups|length }}</td><td class="num">{{ s.confirmed|length }} / {{ s.seats_total }}</td>
+<td>{{ sess_badge(s) }}</td><td>{{ nesda_badge(s) }}</td></tr>{% endfor %}</tbody></table>
+{% else %}<div class="emptybox">{{ icon('layers', 48) }}<p>{{ t('sess.none') }}</p></div>{% endif %}
+</div>
+{% endblock %}

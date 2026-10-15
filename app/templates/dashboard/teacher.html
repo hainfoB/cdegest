@@ -1,0 +1,36 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.dashboard') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{{ t('dash.hello', name=current_user.name) }}</h1><p>{{ t('dash.teacher') }}</p></div>
+  <span class="pill"><span class="dot"></span>{{ today|d }}</span>
+</div>
+
+<section class="fam"><h2>{{ t('teacher.today') }}</h2>
+{% if today_slots %}
+<div class="minicards">{% for sl in today_slots %}
+  <a class="mc today" href="{{ url_for('sessions.roll_call', slot_id=sl.id) }}">
+    <small>{{ sl.start }} – {{ sl.end }} · {{ sl.group.session.title }} · {{ sl.group.name }}</small>
+    <b>{{ sl.module.title }}</b>
+    <span class="btn btn-sm {{ 'btn-line' if sl.called_at else 'btn-cde' }}" style="align-self:flex-start">{{ icon('check', 16) }} {{ t('call.done') if sl.called_at else t('call.do') }}</span>
+  </a>{% endfor %}</div>
+{% else %}<p class="empty">{{ t('teacher.no_today') }}</p>{% endif %}
+</section>
+
+{% if missing %}
+<section class="fam"><h2>{{ t('teacher.missing') }}</h2>
+<div class="minicards">{% for sl in missing %}<div class="mc alert"><small>{{ sl.day|d }} · {{ sl.start }} · {{ sl.group.name }}</small><b>{{ sl.module.title }}</b><small>{{ t('teacher.ask_resp') }}</small></div>{% endfor %}</div>
+</section>
+{% endif %}
+
+<div class="grid2">
+<div class="panel"><h2>{{ t('teacher.modules') }}</h2>
+{% if modules %}<table class="tbl compact"><tbody>{% for m in modules %}<tr><td><b>{{ m.title }}</b><br><small class="muted">{{ m.session.title }} · {{ m.session.institute.code }}</small></td><td class="num">{{ m.hours }} h</td><td><a href="{{ url_for('sessions.view', sid=m.session_id, tab='presence') }}">{{ t('nav.attendance') }}</a></td></tr>{% endfor %}</tbody></table>
+{% else %}<p class="empty">{{ t('teacher.empty') }}</p>{% endif %}</div>
+<div class="panel"><h2>{{ t('teacher.slots') }}</h2>
+{% if upcoming %}<table class="tbl compact"><tbody>{% for sl in upcoming %}<tr><td>{{ sl.day|d }}</td><td>{{ sl.start }}–{{ sl.end }}</td><td><b>{{ sl.module.title }}</b><br><small class="muted">{{ sl.group.session.title }} · {{ sl.group.name }}</small></td></tr>{% endfor %}</tbody></table>
+{% else %}<p class="empty">—</p>{% endif %}
+<p class="muted">{{ t('teacher.done_count', n=n_done) }}</p></div>
+</div>
+{% endblock %}

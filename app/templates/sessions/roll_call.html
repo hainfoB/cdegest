@@ -1,0 +1,46 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('call.title') }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <p class="muted"><a href="{{ url_for('sessions.view', sid=s.id, tab='planning') }}">{{ s.title }}</a> · {{ slot.group.name }}</p>
+    <h1>{{ t('call.title') }} — {{ slot.module.title }}</h1>
+    <p>{{ slot.day|d }} · {{ slot.start }}–{{ slot.end }} · {{ slot.teacher.name }}</p>
+  </div>
+  {% if s.mode != 'onsite' %}<div class="panel" style="text-align:center;padding:12px 18px"><small class="muted">{{ t('call.online_code') }}</small><div class="big-n" dir="ltr">{{ slot.code }}</div></div>{% endif %}
+</div>
+{% if mode == 'locked' %}<div class="flash flash-err">{{ icon('lock', 18) }}<span>{{ t('call.locked') }}</span></div>
+{% elif mode == 'manage' and (slot.day < today or slot.called_at) %}<div class="flash flash-ok">{{ icon('info', 18) }}<span>{{ t('call.correction') }}</span></div>{% endif %}
+
+<form method="post" class="panel" id="callForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% set editable = mode in ('teacher','manage') %}
+  {% if editable %}<div class="row between" style="margin-bottom:6px"><span class="muted">{{ enrs|length }} {{ t('sess.enrolled')|lower }}</span><button type="button" class="btn btn-sm btn-line" id="allPresent">{{ icon('check', 16) }} {{ t('call.all_present') }}</button></div>{% endif %}
+  {% for e in enrs %}{% set a = marks.get(e.id) %}{% set cur = a.status if a else '' %}
+  <div class="call-row">
+    <div class="who"><b>{{ e.participant.full_name }}</b><small>{{ e.participant.specialty or '' }}{% if e.dropout %} · {{ t('drop.' ~ e.dropout_reason) }}{% endif %}{% if a and a.method == 'code' %} · {{ t('call.by_code') }}{% endif %}{% if a and a.corrected %} · {{ t('att.corrected') }}{% endif %}</small>
+      <div class="times {{ 'show' if cur == 'late' or (a and a.left) }}" id="t{{ e.id }}">
+        <input class="input sm" type="time" name="in_{{ e.id }}" value="{{ a.arrived if a and a.arrived }}" aria-label="{{ t('call.arrived') }}" {{ 'disabled' if not editable }}>
+        <input class="input sm" type="time" name="out_{{ e.id }}" value="{{ a.left if a and a.left }}" aria-label="{{ t('call.left') }}" {{ 'disabled' if not editable }}>
+      </div></div>
+    <div class="radios" role="radiogroup" aria-label="{{ e.participant.full_name }}">
+      {% for k in ['present','late','absent','excused'] %}
+      <input type="radio" id="r{{ e.id }}{{ k }}" name="st_{{ e.id }}" value="{{ k }}" {{ 'checked' if cur == k }} {{ 'disabled' if not editable }} data-e="{{ e.id }}">
+      <label for="r{{ e.id }}{{ k }}" class="r-{{ k }}">{{ t('att.' ~ k) }}</label>{% endfor %}
+    </div>
+  </div>
+  {% else %}<p class="empty">{{ t('enr.none') }}</p>{% endfor %}
+  {% if editable %}
+  <div class="callbar"><span><span class="counter" id="cnt">0</span> / {{ enrs|length }} {{ t('att.present')|lower }}</span>
+    <button class="btn btn-cde" type="submit">{{ icon('check', 18) }} {{ t('call.save') }}</button></div>
+  {% endif %}
+</form>
+<script>
+(()=>{const f=document.getElementById('callForm');
+function cnt(){document.getElementById('cnt')&&(document.getElementById('cnt').textContent=f.querySelectorAll('input[type=radio][value=present]:checked,input[type=radio][value=late]:checked').length)}
+f.addEventListener('change',e=>{if(e.target.type==='radio'){const t=document.getElementById('t'+e.target.dataset.e);if(t)t.classList.toggle('show',e.target.value==='late')}cnt()});
+const all=document.getElementById('allPresent');if(all)all.addEventListener('click',()=>{f.querySelectorAll('.radios').forEach(g=>{if(!g.querySelector('input:checked')){const r=g.querySelector('input[value=present]');r.checked=true}});cnt()});
+cnt();})();
+</script>
+{% endblock %}
