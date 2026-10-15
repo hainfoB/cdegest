@@ -125,6 +125,8 @@ def import_xlsx():
         known = {c.phone for c in Candidature.query.filter(Candidature.institute_id == inst.id)}
         for r in rows:
             r["dup"] = r["phone"] in known
+            if not r["errors"]:
+                known.add(r["phone"])            # doublon à l'intérieur du fichier
         ctx.update(rows=rows, cols=cols, fname=f.filename, has_q=any(k.startswith("q_") for k in cols),
                    ok=[r for r in rows if not r["errors"] and not r["dup"]],
                    payload=json.dumps([r for r in rows if not r["errors"] and not r["dup"]], ensure_ascii=False))
