@@ -15,7 +15,10 @@ Dossier d'architecture : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 Détails : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## Lancer en local (gratuit)
-**Windows** : installer [Python 3.11+](https://www.python.org/downloads/) (cocher *Add Python to PATH*), télécharger le dépôt, puis double-cliquer sur **`demarrer-windows.bat`**.
+**Windows** : installer [Python 3.10+](https://www.python.org/downloads/) (cocher *Add python.exe to PATH*), télécharger le dépôt, puis double-cliquer sur **`demarrer-windows.bat`**.
+- `demarrer-reseau-windows.bat` : même chose, accessible depuis un téléphone sur le même Wi-Fi (adresse affichée).
+- `reinitialiser-demo-windows.bat` : efface et recrée les données de démonstration (à lancer le jour d'une présentation, pour que l'appel « du jour » existe).
+- Si un dossier `wheels/` est présent, l'installation se fait sans Internet.
 **Linux / macOS** : `./demarrer.sh`
 
 Au premier lancement (1 à 2 minutes), le script installe tout, crée la base locale (SQLite), charge les données de démonstration fictives, génère un mot de passe privé par compte dans **`ACCES_LOCAL.txt`** (jamais envoyé sur GitHub) et ouvre http://localhost:5000.

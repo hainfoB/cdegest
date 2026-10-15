@@ -322,10 +322,13 @@ def seed_demo(today=None):
                      status="submitted", mfirst_teacher=demo_teacher)
         make_session(bba01, "ENT-06", today - timedelta(days=30), n_groups=1, per_group=16, perf=0.9,
                      status="rejected")
+        # live demo: a running session whose slots are all past, ready to be closed and submitted to NESDA
+        make_session(bba01, "ENT-02", today - timedelta(days=16), n_groups=1, per_group=14, perf=0.95,
+                     status="running", mfirst_teacher=demo_teacher)
         make_session(bba01, "ENT-05", today + timedelta(days=12), n_groups=2, per_group=20, perf=1.0, status="open",
                      mfirst_teacher=demo_teacher)
         make_session(bba01, "ENT-08", today + timedelta(days=30), n_groups=1, per_group=20, perf=1.0, status="open")
-        counter += 5
+        counter += 6
     for code in ("INSFP-BBA-02", "INSFP-ALG-01", "INSFP-ORN-01", "INSFP-STF-01"):
         i = Institute.query.filter_by(code=code).first()
         if i:

@@ -1,0 +1,9 @@
+# Dépendances pour le lancement local (Windows / Linux / macOS), sans serveur PostgreSQL
+flask>=3.0.3
+flask-sqlalchemy>=3.1.1
+flask-migrate>=4.0.7
+flask-login>=0.6.3
+flask-wtf>=1.2.1
+openpyxl>=3.1.2
+segno>=1.6.1
+python-dotenv>=1.0.1
