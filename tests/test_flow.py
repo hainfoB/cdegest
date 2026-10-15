@@ -207,3 +207,15 @@ def test_report_flow(app, client):
     assert r and r.status == "transmitted"
     assert client.get(f"/rapports/{r.id}").status_code == 200
     assert client.get(f"/rapports/{r.id}.xlsx").status_code == 200
+
+
+def test_teacher_absence_cancels_slot(app, client, tpl):
+    s = _session_with_today_slot(client, tpl)
+    slot = Slot.query.first()
+    r = client.post(f"/sessions/{s.id}/creneaux", data={"action": "cancel", "id": slot.id})
+    assert r.status_code == 302 and slot.cancelled and slot.cancel_reason == "enseignant_absent"
+    from app.services.training import past_slots
+    assert past_slots(slot.group) == [], "a cancelled slot never counts in trainee attendance"
+    client.post("/logout")
+    login(client, TEACH)
+    assert client.post(f"/appel/{slot.id}", data={}).status_code == 403, "no roll call on a cancelled slot"

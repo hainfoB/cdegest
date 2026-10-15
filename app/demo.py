@@ -71,7 +71,7 @@ DEMO_INST = {
     "68": [("INSFP-BSD-01", "INSFP Bou Saâda 01", "المعهد الوطني المتخصص في التكوين المهني بوسعادة 01")],
 }
 # relative "performance" of each wilaya (drives attendance and volume) — fictitious
-PERF = {"34": 1.0, "19": 0.95, "28": 0.7, "16": 1.1, "31": 0.9, "25": 0.85, "05": 0.6, "06": 0.8, "13": 0.75,
+PERF = {"34": 1.0, "19": 1.05, "28": 0.45, "16": 1.1, "31": 0.9, "25": 0.85, "05": 0.6, "06": 0.8, "13": 0.75,
         "30": 0.55, "68": 0.65}
 
 M_FIRST = ["Mohamed", "Ahmed", "Yacine", "Amine", "Walid", "Sofiane", "Karim", "Abdelkader", "Bilal", "Hamza",
@@ -225,10 +225,22 @@ def seed_demo(today=None):
             s.status = "open"
             return s
         # attendance on past slots
+        # teacher absences (cancelled slots) and missing roll calls: frequent where the wilaya struggles
+        p_cancel = 0.18 if perf < 0.6 else (0.04 if perf < 0.8 else 0.01)
+        p_uncalled = 0.08 if perf < 0.6 else 0.0
         for g in s.groups:
             past = [sl for sl in g.slots if sl.day < today or (sl.day == today and not force_today)]
+            for sl in past:
+                if R.random() < p_cancel and not force_today:
+                    sl.cancelled, sl.cancel_reason = True, "enseignant_absent"
+            if perf < 0.6 and len(past) > 3:          # struggling wilaya: at least one teacher absence per group
+                sl = R.choice(past[1:-1])
+                sl.cancelled, sl.cancel_reason = True, "enseignant_absent"
+            uncalled = {sl.id for sl in past if not sl.cancelled and R.random() < p_uncalled}
+            past = [sl for sl in past if not sl.cancelled and sl.id not in uncalled]
             for e in g.enrollments:
-                rel = min(0.995, max(0.45, R.gauss(0.9 * perf + 0.09, 0.07)))
+                low = R.random() < max(0.03, 0.4 - 0.4 * perf)        # share of irregular trainees
+                rel = min(0.995, max(0.4, R.gauss(0.68, 0.1) if low else R.gauss(0.95, 0.035)))
                 stop = len(past) + 1
                 if R.random() < 0.06 * (1.45 - perf):
                     stop = R.randint(2, max(2, len(past) - 2))
@@ -372,7 +384,8 @@ def seed_demo(today=None):
                 if v is None:
                     continue
                 pf = PERF.get(wcode, 0.7)
-                f = R.choice([0.85, 0.9, 0.95, 0.97, 1.0, 1.08] if pf >= 0.9 else
+                f = R.choice([0.8, 0.85, 0.9, 0.95] if pf >= 1.0 else [1.25, 1.35, 1.5] if pf < 0.5 else
+                             [0.85, 0.9, 0.95, 0.97, 1.0, 1.08] if pf >= 0.9 else
                              [0.9, 1.0, 1.08, 1.15] if pf >= 0.75 else [1.05, 1.15, 1.25, 1.35])
                 tgt = (min(98.0, round(v * (2 - f) if k in K.LOWER_IS_BETTER else v * f)) if k in K.RATES
                        else max(1, round(v * (2 - f) if k in K.LOWER_IS_BETTER else v * f)))
@@ -384,13 +397,21 @@ def seed_demo(today=None):
     for w in wil.values():
         if w.code in data_codes:
             base = realised(w.code, prev_label, 0)
+            grow = {"19": 0.6, "28": 1.5}.get(w.code, 1.1)    # Sétif ahead of its targets, M'Sila behind
             ann = {k: (generic[k] if base.get(k) is None else
-                       (round(base[k]) if k in K.RATES else max(1, round(base[k] * 1.1)))) for k in K.KPIS}
+                       (round(base[k]) if k in K.RATES else max(1, round(base[k] * grow)))) for k in K.KPIS}
+            if w.code == "19":   # targets set realistically: Sétif is ahead
+                ann.update({k: max(0, ann[k] - 6) for k in K.RATES if k not in K.LOWER_IS_BETTER and k in ann})
+                ann.update({"dropout_rate": ann["dropout_rate"] + 6, "dropouts": ann["dropouts"] * 3})
+            if w.code == "28":
+                ann.update({"attendance": 90, "dropout_rate": 8, "satisfaction": 85, "fill": 85})
         else:
             ann = dict(generic)
         for k, v in ann.items():
             db.session.add(Objective(year=cur_label, semester=0, wilaya_id=w.id, kpi=k, target=v))
             s1 = v if k in K.RATES else max(1, round(v * 0.5))
+            if k in ("accepted", "conversion", "completed"):
+                continue                       # NESDA outcomes come months later: annual target only
             db.session.add(Objective(year=cur_label, semester=1, wilaya_id=w.id, kpi=k, target=s1))
             db.session.add(Objective(year=cur_label, semester=2, wilaya_id=w.id, kpi=k, target=s1))
     # BBA: DFEP distribution between its CDE (counts split, rates copied)

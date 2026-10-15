@@ -110,7 +110,7 @@ def dashboard():
         return render_template("dashboard/institute.html", **ctx)
 
     # teacher
-    my_slots = (Slot.query.filter(Slot.teacher_id == u.id).order_by(Slot.day, Slot.start).all())
+    my_slots = (Slot.query.filter(Slot.teacher_id == u.id, Slot.cancelled.is_(False)).order_by(Slot.day, Slot.start).all())
     ctx.update(view="teacher",
                today_slots=[s for s in my_slots if s.day == today],
                upcoming=[s for s in my_slots if s.day > today][:8],

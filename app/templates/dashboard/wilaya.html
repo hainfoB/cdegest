@@ -31,9 +31,9 @@
 {% endif %}
 
 <div class="panel"><h2>{{ t('nat.cde') }}</h2>
-<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('kpi.groups') }}</th><th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.dropout_rate') }}</th><th>{{ t('kpi.certificates') }}</th><th>{{ t('obj.status') }}</th></tr></thead>
+<table class="tbl"><thead><tr><th>{{ t('dash.table.code') }}</th><th>{{ t('dash.table.institute') }}</th><th>{{ t('kpi.groups') }}</th><th>{{ t('kpi.trained') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.dropout_rate') }}</th><th>{{ t('kpi.certificates') }}</th><th>{{ t('kpi.slots_held') }}</th><th>{{ t('kpi.teacher_abs') }}</th><th>{{ t('obj.status') }}</th></tr></thead>
 <tbody>{% for r in rows %}{% set v = r['values'] %}<tr><td class="code">{{ r.institute.code }}</td><td><b>{{ r.institute.name(lang) }}</b></td>
-<td class="num">{{ fmt('groups', v.groups) }}</td><td class="num">{{ fmt('trained', v.trained) }}</td><td class="num">{{ fmt('attendance', v.attendance) }}</td><td class="num">{{ fmt('dropout_rate', v.dropout_rate) }}</td><td class="num">{{ fmt('certificates', v.certificates) }}</td><td>{{ status_pill(r.status) }}</td></tr>{% endfor %}</tbody></table></div>
+<td class="num">{{ fmt('groups', v.groups) }}</td><td class="num">{{ fmt('trained', v.trained) }}</td><td class="num">{{ fmt('attendance', v.attendance) }}</td><td class="num">{{ fmt('dropout_rate', v.dropout_rate) }}</td><td class="num">{{ fmt('certificates', v.certificates) }}</td><td class="num">{{ fmt('slots_held', v.slots_held) }}</td><td class="num">{{ v.teacher_abs }}</td><td>{{ status_pill(r.status) }}</td></tr>{% endfor %}</tbody></table></div>
 
 {% if pending and view == 'nesda' %}
 <div class="panel" style="margin-top:20px"><h2>{{ t('nav.nesda_queue') }}</h2>

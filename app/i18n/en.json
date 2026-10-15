@@ -479,5 +479,15 @@
  "pub.verify": "Verify a certificate",
  "pub.verify_btn": "Verify",
  "pub.verify_ok": "Genuine certificate",
- "pub.verify_bad": "No valid certificate matches this number."
+ "pub.verify_bad": "No valid certificate matches this number.",
+ "slot.teacher_absent": "Teacher absent",
+ "slot.cancel_hint": "Cancels the slot: excluded from trainee attendance, shown as a teacher absence",
+ "slot.cancelled_enseignant_absent": "Cancelled · teacher absent",
+ "slot.cancelled_autre": "Cancelled",
+ "slot.restore": "Restore",
+ "slot.cancelled_ok": "Slot cancelled (teacher absent), to be rescheduled.",
+ "nesda.cancelled": "Cancelled slots (teacher absent)",
+ "kpi.teacher_abs": "Teacher absences",
+ "kpi.slots_held": "Slots delivered",
+ "kpi.compl": "Complementary indicators: delivery of sessions"
 }

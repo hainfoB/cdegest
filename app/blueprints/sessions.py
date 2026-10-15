@@ -249,6 +249,21 @@ def slots(sid):
     s = get_session(sid)
     require_manage(s)
     f = request.form
+    if f.get("action") in ("cancel", "restore"):
+        sl = db.session.get(Slot, _int(f.get("id"), -1))
+        if not sl or sl.group.session_id != s.id:
+            abort(404)
+        if f["action"] == "cancel" and not sl.attendances:
+            sl.cancelled, sl.cancel_reason, sl.cancelled_by_id = True, (f.get("reason") or "enseignant_absent")[:20], current_user.id
+            AuditLog.log("slot.cancel", target=f"slot:{sl.id}", details=sl.cancel_reason)
+            flash(t("slot.cancelled_ok"), "ok")
+        elif f["action"] == "restore":
+            sl.cancelled, sl.cancel_reason = False, None
+            AuditLog.log("slot.restore", target=f"slot:{sl.id}")
+        else:
+            flash(t("slot.in_use"), "err")
+        db.session.commit()
+        return redirect(url_for("sessions.view", sid=s.id, tab="planning"))
     if f.get("action") == "delete":
         sl = db.session.get(Slot, _int(f.get("id"), -1))
         if sl and sl.group.session_id == s.id and not sl.attendances:
@@ -354,6 +369,8 @@ def _can_call(slot):
 def roll_call(slot_id):
     slot = db.session.get(Slot, slot_id) or abort(404)
     mode = _can_call(slot)
+    if slot.cancelled and mode == "teacher":
+        mode = "locked"
     s = slot.group.session
     if mode is None and not can_see_session(current_user, s):
         abort(403)

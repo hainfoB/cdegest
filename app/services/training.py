@@ -11,7 +11,7 @@ from ..utils import utcnow
 
 def past_slots(group, today=None):
     today = today or date.today()
-    return [s for s in group.slots if s.day <= today] if group else []
+    return [s for s in group.slots if s.day <= today and not s.cancelled] if group else []
 
 
 def enrollment_stats(enr, today=None):

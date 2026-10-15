@@ -12,6 +12,7 @@
   <div class="mc"><small>{{ t('sess.enrolled') }}</small><span class="big-n">{{ enrs|length }}</span></div>
   <div class="mc"><small>{{ t('cert.eligible') }} (≥ {{ s.min_attendance }} %)</small><span class="big-n">{{ n_elig }}</span></div>
   <div class="mc {{ 'alert' if uncalled }}"><small>{{ t('nesda.uncalled') }}</small><span class="big-n">{{ uncalled|length }}<small style="font-size:14px;color:var(--mut)"> / {{ n_slots }}</small></span></div>
+  <div class="mc {{ 'alert' if cancelled }}"><small>{{ t('nesda.cancelled') }}</small><span class="big-n">{{ cancelled|length }}</span></div>
   <div class="mc {{ 'alert' if corrections }}"><small>{{ t('nesda.corrections') }}</small><span class="big-n">{{ corrections }}</span></div>
 </div>
 <div class="panel" style="overflow-x:auto"><h2>{{ t('nesda.lists') }}</h2>

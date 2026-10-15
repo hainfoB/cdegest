@@ -202,10 +202,14 @@ class Slot(db.Model):
     end = db.Column(db.String(5), nullable=False)
     code = db.Column(db.String(4), default=lambda: f"{secrets.randbelow(9000) + 1000}")
     called_at = db.Column(db.DateTime)                               # appel enregistré par l'enseignant
+    # créneau annulé : absence de l'enseignant (ou autre motif) — exclu du calcul d'assiduité
+    cancelled = db.Column(db.Boolean, default=False, nullable=False, server_default="0")
+    cancel_reason = db.Column(db.String(20))                         # enseignant_absent | autre
+    cancelled_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     group = db.relationship("Group", back_populates="slots")
     module = db.relationship("Module")
-    teacher = db.relationship("User")
+    teacher = db.relationship("User", foreign_keys=[teacher_id])
     attendances = db.relationship("Attendance", back_populates="slot", cascade="all, delete-orphan")
 
     @property

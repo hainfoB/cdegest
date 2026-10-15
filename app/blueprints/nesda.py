@@ -50,11 +50,12 @@ def review(sid):
     corrections = (Attendance.query.join(Enrollment, Attendance.enrollment_id == Enrollment.id)
                    .filter(Enrollment.session_id == s.id, Attendance.corrected.is_(True)).count())
     slots = [sl for g in s.groups for sl in g.slots]
-    uncalled = [sl for sl in slots if sl.day <= date.today() and sl.called_at is None]
+    uncalled = [sl for sl in slots if sl.day <= date.today() and sl.called_at is None and not sl.cancelled]
+    cancelled = [sl for sl in slots if sl.cancelled]
     can_act = (current_user.role == NESDA and s.nesda_status == "submitted") or \
               (current_user.role in (NESDA_DG, ADMIN) and s.nesda_status in ("submitted", "wilaya_ok"))
     return render_template("nesda/review.html", s=s, enrs=enrs, stats=stats, elig=elig, corrections=corrections,
-                           uncalled=uncalled, n_slots=len(slots), can_act=can_act)
+                           uncalled=uncalled, cancelled=cancelled, n_slots=len(slots), can_act=can_act)
 
 
 @bp.route("/participants", methods=["GET", "POST"])

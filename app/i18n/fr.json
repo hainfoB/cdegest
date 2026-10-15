@@ -479,5 +479,15 @@
  "pub.verify": "Vérifier une attestation",
  "pub.verify_btn": "Vérifier",
  "pub.verify_ok": "Attestation authentique",
- "pub.verify_bad": "Aucune attestation valide ne correspond à ce numéro."
+ "pub.verify_bad": "Aucune attestation valide ne correspond à ce numéro.",
+ "slot.teacher_absent": "Enseignant absent",
+ "slot.cancel_hint": "Annule le créneau : il ne compte plus dans l'assiduité des stagiaires et apparaît comme absence d'enseignant",
+ "slot.cancelled_enseignant_absent": "Annulé · enseignant absent",
+ "slot.cancelled_autre": "Annulé",
+ "slot.restore": "Rétablir",
+ "slot.cancelled_ok": "Créneau annulé (absence enseignant), à reprogrammer.",
+ "nesda.cancelled": "Créneaux annulés (enseignant absent)",
+ "kpi.teacher_abs": "Absences enseignants",
+ "kpi.slots_held": "Créneaux assurés",
+ "kpi.compl": "Indicateurs complémentaires : déroulement des séances"
 }

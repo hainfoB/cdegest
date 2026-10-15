@@ -479,5 +479,15 @@
  "pub.verify": "التحقق من شهادة",
  "pub.verify_btn": "تحقق",
  "pub.verify_ok": "شهادة أصلية",
- "pub.verify_bad": "لا توجد شهادة صالحة بهذا الرقم."
+ "pub.verify_bad": "لا توجد شهادة صالحة بهذا الرقم.",
+ "slot.teacher_absent": "الأستاذ غائب",
+ "slot.cancel_hint": "يلغي الفترة: لا تُحتسب في مواظبة المتربصين وتظهر كغياب للأستاذ",
+ "slot.cancelled_enseignant_absent": "ملغاة · غياب الأستاذ",
+ "slot.cancelled_autre": "ملغاة",
+ "slot.restore": "استرجاع",
+ "slot.cancelled_ok": "تم إلغاء الفترة (غياب الأستاذ)، يجب إعادة برمجتها.",
+ "nesda.cancelled": "فترات ملغاة (غياب الأستاذ)",
+ "kpi.teacher_abs": "غيابات الأساتذة",
+ "kpi.slots_held": "الفترات المنجزة",
+ "kpi.compl": "مؤشرات تكميلية: سير الحصص"
 }

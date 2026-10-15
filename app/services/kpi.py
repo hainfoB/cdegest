@@ -19,7 +19,7 @@ KPI_FAMILIES = [
     ("quality", ["satisfaction", "response"]),
 ]
 KPIS = [k for _f, ks in KPI_FAMILIES for k in ks]
-RATES = {"fill", "attendance", "dropout_rate", "conversion", "satisfaction", "response"}
+RATES = {"fill", "attendance", "dropout_rate", "conversion", "satisfaction", "response", "slots_held"}
 LOWER_IS_BETTER = {"dropout_rate", "dropouts"}
 KPI_ICONS = {
     "groups": "users", "sessions": "layers", "trained": "user-check", "teachers": "briefcase", "hours": "clock",
@@ -37,7 +37,7 @@ def _minutes(s, e):
 def _empty():
     return dict(groups=0, sessions=0, participants=set(), teachers=set(), minutes=0, present=0, total=0,
                 seats=0, confirmed=0, dropouts=0, started=set(), certs=0, responses=0, satisfied=0,
-                eligible=0, accepted=set(), completed=set())
+                eligible=0, accepted=set(), completed=set(), slots=0, cancelled=0)
 
 
 def raw_by_institute(inst_ids, start, end):
@@ -62,6 +62,15 @@ def raw_by_institute(inst_ids, start, end):
                            Session.closed_at.between(start, end))
                    .group_by(Session.institute_id)):
         R[iid]["sessions"] += n
+
+    # slots of the period: delivered vs cancelled (teacher absence)
+    for iid, canc, n in (db.session.query(Session.institute_id, Slot.cancelled, func.count(Slot.id))
+                         .join(Group, Group.session_id == Session.id).join(Slot, Slot.group_id == Group.id)
+                         .filter(Session.institute_id.in_(ids), Slot.day.between(start, b))
+                         .group_by(Session.institute_id, Slot.cancelled)):
+        R[iid]["slots"] += n
+        if canc:
+            R[iid]["cancelled"] += n
 
     # attendance rows of the period
     q = (db.session.query(Session.institute_id, Attendance.status, Attendance.arrived, Attendance.left,
@@ -162,6 +171,9 @@ def finalize(r):
         "completed": len(r["completed"]),
         "satisfaction": _pct(r["satisfied"], r["responses"]),
         "response": _pct(r["responses"], r["eligible"]),
+        # complementary indicators (tables), not part of the 15 targeted KPIs
+        "teacher_abs": r["cancelled"],
+        "slots_held": _pct(r["slots"] - r["cancelled"], r["slots"]),
     }
 
 
