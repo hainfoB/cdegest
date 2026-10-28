@@ -1,0 +1,10 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ t('site.nav_events') }}{% endblock %}
+{% block lead %}<p class="lead">{{ t('ev.lead') }}</p>{% endblock %}
+{% block site %}
+<form class="row evfilter" method="get"><select class="input sm" name="w" aria-label="{{ t('dash.table.wilaya') }}" onchange="this.form.submit()"><option value="">{{ t('pub.all_wilayas') }}</option>{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if wcode == w.code }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select>
+{% if past %}<input type="hidden" name="passes" value="1">{% endif %}
+<a class="pill {{ 'on' if not past }}" href="{{ url_for('site.events', w=wcode) }}">{{ t('ev.upcoming') }}</a><a class="pill {{ 'on' if past }}" href="{{ url_for('site.events', w=wcode, passes=1) }}">{{ t('ev.past') }}</a><noscript><button class="btn btn-sm btn-line">OK</button></noscript></form>
+{% if rows %}<div class="evgrid">{% for e in rows %}{% include "site/_evcard.html" %}{% endfor %}</div>
+{% else %}<div class="sitecard empty">{{ t('ev.none') }}</div>{% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+<a class="evcard" href="{{ url_for('site.event', eid=e.id) }}">
+  <div class="evdate"><b>{{ e.starts_on.day }}</b><span>{{ t('month.' ~ e.starts_on.month) }} {{ e.starts_on.year }}</span></div>
+  <div class="evbody"><span class="evkind k-{{ e.kind }}">{{ t('ev.kind.' ~ e.kind) }}</span><h3>{{ e.title(lang) }}</h3>
+  <small>{{ icon('building', 14) }} {{ e.institute.name(lang) if e.institute else (e.wilaya.name(lang) if e.wilaya else t('ev.national')) }}{% if e.place %} · {{ e.place }}{% endif %}</small>
+  {% if e.ends_on and e.ends_on != e.starts_on %}<small>{{ icon('calendar', 14) }} {{ e.starts_on|d }} {{ arr }} {{ e.ends_on|d }}</small>{% endif %}</div>
+</a>

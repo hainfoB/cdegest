@@ -1,0 +1,18 @@
+{% extends "app.html" %}
+{% block title %}{{ tk.ref }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ tk.subject }}</h1><p dir="auto">{{ tk.ref }} · {{ t('tk.cat.' ~ tk.category) }} · {{ tk.created_at|dt }}</p></div><a class="btn btn-sm btn-line" href="{{ url_for('site.manage_tickets') }}">{{ back }} {{ t('nav.tickets') }}</a></div>
+<div class="grid2">
+<section class="panel"><h2>{{ t('tk.message') }}</h2><p class="pre">{{ tk.message }}</p>
+  <dl class="kv" style="margin-top:16px"><dt>{{ t('tk.name') }}</dt><dd>{{ tk.name }}</dd>
+  {% if tk.phone %}<dt>{{ t('pub.phone') }}</dt><dd dir="ltr"><a href="tel:{{ tk.phone }}">{{ tk.phone }}</a>{% set wa = tk.phone|wa %}{% if wa %} · <a href="{{ wa }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}</dd>{% endif %}
+  {% if tk.email %}<dt>{{ t('tk.email') }}</dt><dd dir="ltr"><a href="mailto:{{ tk.email }}?subject={{ tk.ref }}">{{ tk.email }}</a></dd>{% endif %}
+  <dt>{{ t('tk.origin') }}</dt><dd>{{ tk.institute.name(lang) if tk.institute else (tk.wilaya.name(lang) if tk.wilaya else '—') }}</dd>
+  {% if tk.handled_by %}<dt>{{ t('tk.handled_by') }}</dt><dd>{{ tk.handled_by.name }} · {{ tk.handled_at|dt }}</dd>{% endif %}</dl></section>
+<form class="panel form" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><h2>{{ t('tk.handle') }}</h2>
+  <div class="field"><label>{{ t('ev.state') }}</label><select class="input sm" name="status">{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if tk.status == s }}>{{ t('tk.st.' ~ s) }}</option>{% endfor %}</select></div>
+  <div class="field"><label>{{ t('tk.reply_public') }}</label><textarea class="input" name="reply" rows="7">{{ tk.reply or '' }}</textarea></div>
+  <p class="muted small">{{ t('tk.reply_hint') }}</p>
+  <div class="row end"><button class="btn btn-cde btn-sm">{{ t('save') }}</button></div></form>
+</div>
+{% endblock %}

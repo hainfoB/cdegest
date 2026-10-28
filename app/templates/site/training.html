@@ -1,0 +1,12 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block lead %}<p class="lead">{{ c.lead }}</p>{% endblock %}
+{% block site %}
+<h2 class="sec-t">{{ c.cycle_t }}</h2>
+<ol class="cycle">{% for st, d in c.cycle %}<li><span class="stepn">{{ loop.index }}</span><h3>{{ st }}</h3><p>{{ d }}</p></li>{% endfor %}</ol>
+<div class="grid2 site-grid">
+  <section class="sitecard"><h2>{{ c.themes_t }}</h2><ul class="chips">{% for x in c.themes %}<li>{{ x }}</li>{% endfor %}</ul></section>
+  <section class="sitecard"><h2>{{ c.rules_t }}</h2><ul class="ticks">{% for x in c.rules %}<li>{{ x }}</li>{% endfor %}</ul></section>
+</div>
+<div class="band"><div><b>{{ t('site.band_t') }}</b><p>{{ t('site.band_d') }}</p></div><a class="btn btn-cde" href="{{ url_for('public.apply') }}">{{ t('cta.register') }}</a></div>
+{% endblock %}

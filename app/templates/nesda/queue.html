@@ -11,5 +11,6 @@
 <td class="actions"><a class="btn btn-sm btn-cde" href="{{ url_for('nesda.review', sid=s.id) }}">{{ t('nesda.review') }}</a></td></tr>{% endfor %}</tbody></table>
 {% else %}<div class="emptybox">{{ icon('check', 48) }}<p>{{ t('nesda.nothing') }}</p></div>{% endif %}</div>
 <div class="panel"><h2>{{ t('nesda.history') }}</h2>
-<table class="tbl"><tbody>{% for s in done %}<tr><td><a href="{{ url_for('nesda.review', sid=s.id) }}">{{ s.title }}</a></td><td>{{ s.institute.code }}</td><td>{{ s.closed_at|d }}</td><td>{{ nesda_badge(s) }}</td><td class="muted">{{ (s.nesda_dg_by or s.nesda_w_by).name if (s.nesda_dg_by or s.nesda_w_by) }}</td></tr>{% else %}<tr><td class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+<table class="tbl"><tbody>{% for s in done %}<tr><td><a href="{{ url_for('nesda.review', sid=s.id) }}">{{ s.title }}</a></td><td>{{ s.institute.code }}</td><td>{{ s.closed_at|d }}</td><td>{{ nesda_badge(s) }}</td><td class="muted">{{ (s.nesda_dg_by or s.nesda_w_by).name if (s.nesda_dg_by or s.nesda_w_by) }}</td>
+<td class="actions">{% if s.certificates_open and current_user.role in ('admin','nesda','nesda_dg') %}<a class="btn btn-sm btn-cde" target="_blank" href="{{ url_for('sessions.certificates', sid=s.id) }}">{{ t('cert.print_all') }}</a>{% endif %}</td></tr>{% else %}<tr><td class="empty">—</td></tr>{% endfor %}</tbody></table></div>
 {% endblock %}

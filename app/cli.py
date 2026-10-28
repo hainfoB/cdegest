@@ -95,8 +95,9 @@ def register_cli(app):
         if not app.config["DEMO_MODE"]:
             click.echo("seed-demo: DEMO_MODE=0, rien à faire")
             return
-        from .demo import seed_demo
+        from .demo import seed_demo, seed_site
         click.echo(seed_demo())
+        click.echo(seed_site())
 
     @app.cli.command("init-local")
     def init_local_cmd():

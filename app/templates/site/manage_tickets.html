@@ -1,0 +1,10 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.tickets') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.tickets') }}</h1><p>{{ scope_label }}</p></div>
+<div class="row" style="flex-wrap:wrap"><a class="pill {{ 'on' if st == 'active' }}" href="{{ url_for('site.manage_tickets', st='active') }}">{{ t('tk.active') }} · {{ counts.open + counts.progress }}</a>{% for s in statuses %}<a class="pill {{ 'on' if st == s }}" href="{{ url_for('site.manage_tickets', st=s) }}">{{ t('tk.st.' ~ s) }} · {{ counts[s] }}</a>{% endfor %}<a class="pill {{ 'on' if st == 'all' }}" href="{{ url_for('site.manage_tickets', st='all') }}">{{ t('tk.all') }}</a></div></div>
+<div class="panel"><table class="tbl"><thead><tr><th>{{ t('tk.ref') }}</th><th>{{ t('tk.date') }}</th><th>{{ t('tk.subject') }}</th><th>{{ t('tk.category') }}</th><th>{{ t('tk.origin') }}</th><th>{{ t('ev.state') }}</th></tr></thead>
+<tbody>{% for tk in rows %}<tr><td class="code"><a href="{{ url_for('site.manage_ticket', tid=tk.id) }}">{{ tk.ref }}</a></td><td>{{ tk.created_at|dt }}</td><td><a href="{{ url_for('site.manage_ticket', tid=tk.id) }}"><b>{{ tk.subject }}</b></a><br><small class="muted">{{ tk.name }}</small></td><td>{{ t('tk.cat.' ~ tk.category) }}</td>
+<td>{{ tk.institute.code if tk.institute else (tk.wilaya.name(lang) if tk.wilaya else '—') }}</td><td><span class="tkst st-{{ tk.status }}">{{ t('tk.st.' ~ tk.status) }}</span></td></tr>
+{% else %}<tr><td colspan="6" class="muted">{{ t('tk.none') }}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

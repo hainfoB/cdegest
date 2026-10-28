@@ -8,6 +8,8 @@
     <h1>{{ s.title }}</h1><p>{{ s.institute.name(lang) }} · {{ s.starts_on|d }} {{ arr }} {{ s.ends_on|d }} · {{ nesda_badge(s) }}</p></div>
 </div>
 {% set n_elig = elig.values()|select|list|length %}
+{% if can_print %}<div class="panel printbox" style="margin-bottom:20px"><div class="panelhead"><div><h2>{{ icon('award', 18) }} {{ t('nesda.print_t') }}</h2><p class="muted">{{ t('nesda.print_d') }}</p></div>
+<a class="btn btn-cde" href="{{ url_for('sessions.certificates', sid=s.id) }}" target="_blank">{{ icon('award', 16) }} {{ t('cert.print_all') }}</a></div></div>{% endif %}
 <div class="minicards" style="margin-bottom:20px">
   <div class="mc"><small>{{ t('sess.enrolled') }}</small><span class="big-n">{{ enrs|length }}</span></div>
   <div class="mc"><small>{{ t('cert.eligible') }} (≥ {{ s.min_attendance }} %)</small><span class="big-n">{{ n_elig }}</span></div>
@@ -16,10 +18,11 @@
   <div class="mc {{ 'alert' if corrections }}"><small>{{ t('nesda.corrections') }}</small><span class="big-n">{{ corrections }}</span></div>
 </div>
 <div class="panel" style="overflow-x:auto"><h2>{{ t('nesda.lists') }}</h2>
-<table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('pub.phone') }}</th><th>{{ t('nesda.presences') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.hours') }}</th><th>{{ t('cert.eligible') }}</th></tr></thead>
+<table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('pub.phone') }}</th><th>{{ t('nesda.presences') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('kpi.hours') }}</th><th>{{ t('cert.eligible') }}</th>{% if can_print %}<th>{{ t('cert.number') }}</th><th></th>{% endif %}</tr></thead>
 <tbody>{% for e in enrs %}{% set st = stats[e.id] %}<tr><td><b>{{ e.participant.full_name }}</b></td><td>{{ e.group.name if e.group }}</td><td dir="ltr" style="text-align:start">{{ e.participant.phone }}</td>
 <td class="num">{{ st.present }} / {{ st.expected }}</td><td class="num">{{ st.rate ~ ' %' if st.rate is not none else '—' }}</td><td class="num">{{ (st.minutes/60)|round(1) }}</td>
-<td>{% if elig[e.id] %}<span class="badge b-ok">{{ t('yes') }}</span>{% elif e.dropout %}<span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% else %}<span class="badge b-draft">{{ t('no') }}</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<td>{% if elig[e.id] %}<span class="badge b-ok">{{ t('yes') }}</span>{% elif e.dropout %}<span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% else %}<span class="badge b-draft">{{ t('no') }}</span>{% endif %}</td>
+{% if can_print %}<td class="code">{{ e.cert_no or '—' }}</td><td class="actions">{% if e.cert_no %}<a class="btn btn-sm btn-line" target="_blank" href="{{ url_for('sessions.certificates', sid=s.id, e=e.id) }}">{{ t('cert.print') }}</a>{% endif %}</td>{% endif %}</tr>{% endfor %}</tbody></table></div>
 {% if s.nesda_note %}<div class="flash flash-err" style="margin-top:16px">{{ icon('info', 18) }}<span>{{ s.nesda_note }}</span></div>{% endif %}
 {% if can_act %}
 <div class="grid2" style="margin-top:18px">

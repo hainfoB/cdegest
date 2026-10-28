@@ -41,7 +41,8 @@ def home():
     if current_user.is_authenticated and request.args.get("public") != "1":
         return redirect(url_for("main.dashboard"))
     open_sessions = (Session.query.filter_by(status="open").order_by(Session.starts_on).limit(6).all())
-    return render_template("public/home.html", open_sessions=open_sessions)
+    from .site import _upcoming
+    return render_template("public/home.html", open_sessions=open_sessions, events=_upcoming(limit=3))
 
 
 @bp.route("/lang/<code>")

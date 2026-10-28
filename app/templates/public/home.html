@@ -2,26 +2,7 @@
 {% from "partials/icons.html" import icon %}
 {% block title %}{{ t('nav.home') }}{% endblock %}
 {% block body %}
-<div class="topstrip"><div class="wrap">
-  <div class="contacts">
-    <span>{{ icon('mail', 16) }}{{ config.CONTACT_EMAIL }}</span>
-    <span>{{ icon('phone', 16) }}{{ config.CONTACT_PHONE }}</span>
-  </div>
-  {% include "partials/langsw.html" %}
-</div></div>
-
-<header class="pubhead"><div class="wrap">
-  <a class="logo" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE — {{ t('brand.tagline') }}"></a>
-  <nav class="pubnav" aria-label="{{ t('menu') }}">
-    <a class="on" href="{{ url_for('main.home') }}">{{ t('nav.home') }}</a>
-    <a href="#">{{ t('nav.about') }}</a>
-    <a href="#">{{ t('nav.missions') }}</a>
-    <a href="{{ url_for('public.catalogue') }}">{{ t('nav.program') }}</a>
-    <a href="#">{{ t('nav.faq') }}</a>
-    <a href="#">{{ t('nav.contact') }}</a>
-  </nav>
-  <a class="btn btn-cde" href="{{ url_for('auth.login') }}">{{ t('cta.login') }}</a>
-</div></header>
+{% set page = "home" %}{% include "partials/pubhead.html" %}
 
 <main id="main">
   <section class="hero">
@@ -48,5 +29,19 @@
 <div class="minicards">{% for s in open_sessions %}<a class="mc" href="{{ url_for('public.register', slug=s.slug) }}"><small>{{ s.institute.wilaya.name(lang) }} · {{ s.starts_on|d }}</small><b>{{ s.template.title(lang) if s.template else s.title }}</b><small>{{ s.institute.name(lang) }}</small></a>{% endfor %}</div>
 <p style="margin-top:14px"><a class="btn btn-line btn-sm" href="{{ url_for('public.catalogue') }}">{{ t('see_all') }}</a> <a class="btn btn-line btn-sm" href="{{ url_for('public.verify') }}">{{ t('pub.verify') }}</a></p></section>
 {% endif %}
-<footer class="pubfoot"><div class="wrap"><span>© {{ today.year }} CDE · {{ t('footer.rights') }}</span><span>CDEgest</span></div></footer>
+
+<section class="wrap homesec"><h2 class="sec-t">{{ t('home.how_t') }}</h2>
+<ol class="cycle">{% for k in range(1,6) %}<li><span class="stepn">{{ k }}</span><h3>{{ t('home.how' ~ k ~ '.t') }}</h3><p>{{ t('home.how' ~ k ~ '.d') }}</p></li>{% endfor %}</ol>
+<p class="row" style="margin-top:16px;flex-wrap:wrap"><a class="btn btn-cde btn-sm" href="{{ url_for('site.howto') }}">{{ t('site.nav_howto') }}</a><a class="btn btn-line btn-sm" href="{{ url_for('site.training') }}">{{ t('site.nav_training') }}</a></p></section>
+
+<section class="wrap homesec"><div class="sec-head"><h2 class="sec-t">{{ t('site.nav_events') }}</h2><a class="btn btn-line btn-sm" href="{{ url_for('site.events') }}">{{ t('see_all') }}</a></div>
+{% if events %}<div class="evgrid">{% for e in events %}{% include "site/_evcard.html" %}{% endfor %}</div>{% else %}<div class="sitecard empty">{{ t('ev.none') }}</div>{% endif %}</section>
+
+<section class="wrap homesec"><div class="quick">
+  <a class="qcard" href="{{ url_for('site.faq') }}">{{ icon('info', 28) }}<b>{{ t('site.nav_faq') }}</b><span>{{ t('home.q_faq') }}</span></a>
+  <a class="qcard" href="{{ url_for('site.report') }}">{{ icon('message', 28) }}<b>{{ t('site.nav_report') }}</b><span>{{ t('home.q_report') }}</span></a>
+  <a class="qcard" href="{{ url_for('public.verify') }}">{{ icon('award', 28) }}<b>{{ t('pub.verify') }}</b><span>{{ t('home.q_verify') }}</span></a>
+  <a class="qcard" href="{{ url_for('site.about') }}#contact">{{ icon('phone', 28) }}<b>{{ t('nav.contact') }}</b><span>{{ t('home.q_contact') }}</span></a>
+</div></section>
+{% include "partials/pubfoot.html" %}
 {% endblock %}

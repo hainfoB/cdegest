@@ -93,10 +93,14 @@ def test_full_flow(app, client, tpl):
     certified = [e for e in Enrollment.query.filter_by(session_id=s.id) if e.cert_no]
     assert len(certified) == 2, "only participants with attendance >= 80 %"
 
-    # certificate printable at the CDE, verifiable publicly, survey available
+    # the NESDA representative prints; the CDE manager no longer can
+    html = client.get(f"/sessions/{s.id}/attestations").get_data(as_text=True)
+    assert "NESDA" in client.get(f"/nesda/sessions/{s.id}").get_data(as_text=True)
     client.post("/logout")
     login(client, RESP)
-    html = client.get(f"/sessions/{s.id}/attestations").get_data(as_text=True)
+    assert client.get(f"/sessions/{s.id}/attestations").status_code == 403
+    client.post("/logout")
+    login(client, NESDA_W)
     assert certified[0].cert_no in html and "<svg" in html
     assert "authentique" in pub.get(f"/verifier/{certified[0].cert_no}?lang=fr").get_data(as_text=True)
     q = SurveyQuestion.query.first()

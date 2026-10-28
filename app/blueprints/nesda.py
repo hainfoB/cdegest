@@ -7,7 +7,7 @@ from flask_login import current_user
 from ..extensions import db
 from ..i18n import t
 from ..models import AuditLog, Attendance, Enrollment, Participant, Session
-from ..security import (ADMIN, COORD, DFEP, NESDA, NESDA_DG, RESP, can_see_session, roles_required,
+from ..security import (ADMIN, CERT_PRINTERS, COORD, DFEP, NESDA, NESDA_DG, RESP, can_see_session, roles_required,
                         visible_sessions)
 from ..services import training as T
 
@@ -41,7 +41,7 @@ def review(sid):
         if ok:
             db.session.commit()
             flash(t("nesda.validated") if act == "validate" else t("nesda.rejected"), "ok")
-            return redirect(url_for("nesda.queue"))
+            return redirect(url_for("nesda.review", sid=s.id) if act == "validate" else url_for("nesda.queue"))
         flash(t("sess.action_refused"), "err")
     enrs = sorted([e for e in s.enrollments if e.status == "confirmed"],
                   key=lambda e: (e.group.name if e.group else "~", e.participant.last_name))
@@ -55,7 +55,8 @@ def review(sid):
     can_act = (current_user.role == NESDA and s.nesda_status == "submitted") or \
               (current_user.role in (NESDA_DG, ADMIN) and s.nesda_status in ("submitted", "wilaya_ok"))
     return render_template("nesda/review.html", s=s, enrs=enrs, stats=stats, elig=elig, corrections=corrections,
-                           uncalled=uncalled, cancelled=cancelled, n_slots=len(slots), can_act=can_act)
+                           uncalled=uncalled, cancelled=cancelled, n_slots=len(slots), can_act=can_act,
+                           can_print=current_user.role in CERT_PRINTERS and s.certificates_open)
 
 
 @bp.route("/participants", methods=["GET", "POST"])

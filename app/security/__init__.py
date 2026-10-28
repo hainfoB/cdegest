@@ -39,8 +39,8 @@ AGGREGATE_ONLY = {MFEP}
 
 # Who manages sessions of an institute
 SESSION_MANAGERS = {ADMIN, RESP}
-# Who prints certificates (CDE of the wilaya, after NESDA validation)
-CERT_PRINTERS = {ADMIN, RESP, COORD, DFEP}
+# Who prints certificates: the NESDA representative, once attendance is validated
+CERT_PRINTERS = {ADMIN, NESDA, NESDA_DG}
 # Who validates attendance for NESDA
 NESDA_VALIDATORS = {NESDA, NESDA_DG, ADMIN}
 
@@ -62,6 +62,8 @@ NAV = [
     ("org.institutes", "building", "nav.institutes", {ADMIN, MFEP, DFEP, COORD, NESDA_DG, NESDA}),
     ("org.users", "users", "nav.users", {ADMIN, MFEP, DFEP, COORD, RESP, NESDA_DG}),
     ("org.audit", "shield", "nav.audit", {ADMIN, MFEP, DFEP, COORD, RESP, NESDA_DG}),
+    ("site.manage_events", "calendar", "nav.events", {ADMIN, MFEP, DFEP, COORD, RESP}),
+    ("site.manage_tickets", "message", "nav.tickets", {ADMIN, DFEP, COORD, RESP, NESDA, NESDA_DG}),
     ("main.integration", "globe", "nav.integration", {ADMIN, MFEP}),
 ]
 

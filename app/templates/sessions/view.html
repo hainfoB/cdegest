@@ -203,7 +203,8 @@
 <div class="panel">
   <div class="panelhead"><div><h2>{{ t('nav.certificates') }}</h2><p class="muted">{{ t('cert.rule', n=s.min_attendance) }}</p></div>
     {% if can_print %}<a class="btn btn-cde" href="{{ url_for('sessions.certificates', sid=s.id) }}" target="_blank">{{ icon('award', 16) }} {{ t('cert.print_all') }}</a>{% endif %}</div>
-  {% if not s.certificates_open %}<div class="flash flash-err">{{ icon('lock', 18) }}<span>{{ t('cert.locked') }}</span></div>{% endif %}
+  {% if not s.certificates_open %}<div class="flash flash-err">{{ icon('lock', 18) }}<span>{{ t('cert.locked') }}</span></div>
+  {% elif not can_print %}<div class="flash flash-ok">{{ icon('info', 18) }}<span>{{ t('cert.nesda_prints') }}</span></div>{% endif %}
   {% if sees_people %}
   <table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('grp.group') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('cert.eligible') }}</th><th>{{ t('cert.number') }}</th><th></th></tr></thead>
   <tbody>{% for e in enrs if e.status == 'confirmed' %}{% set st = stats[e.id] %}<tr>

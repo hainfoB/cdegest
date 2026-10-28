@@ -1,0 +1,16 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ e.title(lang) }}{% endblock %}
+{% block crumb %}<a href="{{ url_for('site.events') }}">{{ t('site.nav_events') }}</a>{% endblock %}
+{% block lead %}<p class="lead"><span class="evkind k-{{ e.kind }}">{{ t('ev.kind.' ~ e.kind) }}</span></p>{% endblock %}
+{% block site %}
+<div class="grid2 site-grid evdetail">
+  <article class="sitecard prose">{% for para in e.body(lang).split('\n') if para.strip() %}<p>{{ para }}</p>{% else %}<p class="muted">—</p>{% endfor %}</article>
+  <aside class="sitecard"><dl class="kv">
+    <dt>{{ t('sess.dates') }}</dt><dd>{{ e.starts_on|d }}{% if e.ends_on and e.ends_on != e.starts_on %} {{ arr }} {{ e.ends_on|d }}{% endif %}</dd>
+    <dt>{{ t('ev.where') }}</dt><dd>{{ e.place or '—' }}</dd>
+    <dt>{{ t('ev.organiser') }}</dt><dd>{{ e.institute.name(lang) if e.institute else (t('ev.wilaya_of') ~ ' ' ~ e.wilaya.name(lang) if e.wilaya else t('ev.national')) }}</dd>
+    {% if e.institute and e.institute.phone %}<dt>{{ t('pub.phone') }}</dt><dd dir="ltr">{{ e.institute.phone }}</dd>{% endif %}
+  </dl><a class="btn btn-cde btn-sm" style="margin-top:14px" href="{{ url_for('public.apply') }}">{{ t('cta.register') }}</a></aside>
+</div>
+<p style="margin-top:20px"><a class="btn btn-line btn-sm" href="{{ url_for('site.events') }}">{{ back }} {{ t('site.nav_events') }}</a></p>
+{% endblock %}

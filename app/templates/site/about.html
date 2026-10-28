@@ -1,0 +1,12 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ t('nav.about') }}{% endblock %}
+{% block lead %}<p class="lead">{{ t('ab.lead') }}</p>{% endblock %}
+{% block site %}
+<h2 class="sec-t">{{ t('nav.missions') }}</h2>
+<div class="grid3 site-grid">{% for k in ['m1','m2','m3'] %}<section class="sitecard mission"><h3>{{ t('ab.' ~ k ~ '.t') }}</h3><p>{{ t('ab.' ~ k ~ '.d') }}</p></section>{% endfor %}</div>
+<h2 class="sec-t">{{ t('ab.actors_t') }}</h2>
+<div class="actors">{% for k in ['mfep','dfep','coord','resp','formateur','nesda'] %}<div class="actor"><b>{{ t('ab.a.' ~ k ~ '.t') }}</b><p>{{ t('ab.a.' ~ k ~ '.d') }}</p></div>{% endfor %}</div>
+<section class="sitecard" id="contact" style="margin-top:28px"><h2>{{ t('nav.contact') }}</h2>
+  <p>{{ t('ab.contact_d') }}</p>
+  <div class="row" style="margin-top:12px;flex-wrap:wrap"><span class="pill">{{ icon('mail', 16) }} {{ config.CONTACT_EMAIL }}</span><span class="pill" dir="ltr">{{ icon('phone', 16) }} {{ config.CONTACT_PHONE }}</span><a class="btn btn-cde btn-sm" href="{{ url_for('site.report') }}">{{ t('site.nav_report') }}</a></div></section>
+{% endblock %}

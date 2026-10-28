@@ -488,3 +488,62 @@ def seed_demo(today=None):
     n_att = Attendance.query.count()
     return (f"seed-demo: {counter} sessions, {len(people)} participants, {n_att} présences, "
             f"{Objective.query.count()} objectifs, {Report.query.count()} rapports, {n_c} candidatures (données fictives)")
+
+
+# ---------------------------------------------------------------- site public (événements, signalements)
+
+def seed_site(today=None):
+    """Événements et signalements FICTIFS pour le site public. Idempotent."""
+    from .models import Event, Ticket
+    today = today or date.today()
+    if Event.query.first():
+        return "seed-site: déjà présent"
+    inst = {i.code: i for i in Institute.query}
+    wil = {w.code: w for w in Wilaya.query}
+    bba = Institute.query.join(Wilaya).filter(Wilaya.code == "34").order_by(Institute.code).first()
+    EV = [
+        # (jours, durée, kind, institut, wilaya, titre fr, titre ar, lieu, texte fr, texte ar)
+        (6, 1, "portes_ouvertes", bba, None, "Journée portes ouvertes du CDE", "يوم الأبواب المفتوحة للمركز", "Hall principal",
+         "Venez découvrir le CDE, rencontrer les enseignants et vous inscrire à la prochaine session.\nPrésentation des parcours, témoignages d'anciens stagiaires et stands NESDA.",
+         "تعال لاكتشاف المركز ولقاء الأساتذة والتسجيل في الدورة القادمة.\nعرض المسارات وشهادات المتربصين السابقين وأجنحة الوكالة."),
+        (12, 2, "salon", None, "16", "Salon national des jeunes entrepreneurs de la formation professionnelle", "الصالون الوطني للمقاولين الشباب للتكوين المهني", "Palais des expositions, Alger",
+         "Les meilleurs projets issus des CDE de toutes les wilayas exposent leurs produits et services.\nAteliers de financement animés par la NESDA.",
+         "تعرض أفضل المشاريع الناتجة عن المراكز من كل الولايات منتجاتها وخدماتها.\nورشات تمويل تنشطها الوكالة."),
+        (20, 1, "concours", None, None, "Concours national « Mon projet en 3 minutes »", "المسابقة الوطنية «مشروعي في 3 دقائق»", "Dans chaque CDE puis finale nationale",
+         "Présentez votre projet en trois minutes devant un jury. Les lauréats de wilaya participent à la finale nationale.",
+         "قدم مشروعك في ثلاث دقائق أمام لجنة تحكيم. يشارك الفائزون على مستوى الولايات في النهائي الوطني."),
+        (3, 1, "annonce", inst.get("INSFP-STF-01"), None, "Ouverture des inscriptions — session de novembre", "فتح التسجيل — دورة نوفمبر", None,
+         "Les inscriptions pour la session de novembre sont ouvertes. 150 places, groupes du matin et de l'après-midi.",
+         "التسجيل في دورة نوفمبر مفتوح. 150 مقعدا، أفواج صباحية ومسائية."),
+        (9, 1, "evenement", inst.get("INSFP-ORN-01"), None, "Atelier « Financer son projet avec la NESDA »", "ورشة «تمويل مشروعك مع الوكالة»", "Salle de conférences",
+         "Les conseillers NESDA présentent les dispositifs de financement et répondent aux questions des porteurs de projet.",
+         "يقدم مستشارو الوكالة أجهزة التمويل ويجيبون عن أسئلة حاملي المشاريع."),
+        (15, 1, "portes_ouvertes", inst.get("INSFP-CST-01"), None, "Portes ouvertes CDE Constantine", "أبواب مفتوحة لمركز قسنطينة", None,
+         "Visite du centre, présentation du programme et inscriptions sur place.", "زيارة المركز وعرض البرنامج والتسجيل في عين المكان."),
+        (-20, 1, "evenement", bba, None, "Remise des attestations — session d'octobre", "تسليم الشهادات — دورة أكتوبر", "Amphithéâtre",
+         "Cérémonie de remise des attestations par le représentant de la NESDA.", "حفل تسليم الشهادات من طرف ممثل الوكالة."),
+    ]
+    for d, dur, kind, i, wcode, tf, ta, place, bf, ba in EV:
+        start = today + timedelta(days=d)
+        w = i.wilaya if i else wil.get(wcode) if wcode else None
+        db.session.add(Event(kind=kind, title_fr=tf, title_ar=ta, body_fr=bf, body_ar=ba, starts_on=start,
+                             ends_on=start + timedelta(days=dur - 1) if dur > 1 else None, place=place,
+                             wilaya=w, institute=i, published=True))
+    TK = [
+        ("inscription", "Amine B.", "0550000001", None, bba, "Erreur dans mon numéro de téléphone",
+         "J'ai saisi un mauvais numéro lors de mon inscription, le bon est 0550000001.", "open"),
+        ("compte", "Enseignant CDE", None, "formateur@example.dz", bba, "Mot de passe oublié",
+         "Je n'arrive plus à me connecter pour faire l'appel.", "progress"),
+        ("attestation", "Sara K.", "0660000002", None, inst.get("INSFP-STF-01"), "Attestation non reçue",
+         "J'ai terminé la session d'octobre, quand puis-je récupérer mon attestation ?", "resolved"),
+        ("technique", "Yacine M.", "0770000003", None, None, "La page d'inscription ne s'affiche pas",
+         "Sur mon téléphone, la page reste blanche après l'étape 2.", "open"),
+    ]
+    for cat, name, ph, em, i, sj, msg, st in TK:
+        tk = Ticket(category=cat, name=name, phone=ph, email=em, institute=i, wilaya=i.wilaya if i else None,
+                    subject=sj, message=msg, status=st)
+        if st == "resolved":
+            tk.reply = "Votre attestation est disponible auprès du représentant NESDA de la wilaya depuis le 20 du mois."
+        db.session.add(tk)
+    db.session.commit()
+    return f"seed-site: {len(EV)} événements, {len(TK)} signalements"

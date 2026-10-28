@@ -1,0 +1,13 @@
+<footer class="sitefoot"><div class="wrap">
+  <div class="sf-col sf-brand"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE"><p>{{ t('site.foot_about') }}</p></div>
+  <div class="sf-col"><h4>{{ t('site.foot_trainees') }}</h4>
+    <a href="{{ url_for('site.howto') }}">{{ t('site.howto_t') }}</a><a href="{{ url_for('public.apply') }}">{{ t('cta.register') }}</a>
+    <a href="{{ url_for('public.catalogue') }}">{{ t('nav.program') }}</a><a href="{{ url_for('site.training') }}">{{ t('site.nav_training') }}</a></div>
+  <div class="sf-col"><h4>{{ t('site.foot_info') }}</h4>
+    <a href="{{ url_for('site.events') }}">{{ t('site.nav_events') }}</a><a href="{{ url_for('site.faq') }}">{{ t('site.nav_faq') }}</a>
+    <a href="{{ url_for('public.verify') }}">{{ t('pub.verify') }}</a><a href="{{ url_for('site.about') }}">{{ t('nav.about') }}</a></div>
+  <div class="sf-col"><h4>{{ t('site.foot_help') }}</h4>
+    <a href="{{ url_for('site.report') }}">{{ t('site.nav_report') }}</a><a href="{{ url_for('site.report') }}#suivi">{{ t('tk.follow') }}</a>
+    <span>{{ config.CONTACT_EMAIL }}</span><span><span dir="ltr">{{ config.CONTACT_PHONE }}</span></span></div>
+</div>
+<div class="wrap sf-bottom"><span>© {{ today.year }} CDE · {{ t('footer.rights') }}</span><span>{{ t('site.foot_proto') }}</span></div></footer>

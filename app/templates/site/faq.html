@@ -1,0 +1,11 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ t('site.nav_faq') }}{% endblock %}
+{% block lead %}<p class="lead">{{ t('site.faq_lead') }}</p>{% endblock %}
+{% block site %}
+<div class="faqwrap">
+<nav class="faqtoc" aria-label="{{ t('site.nav_faq') }}">{% for g, items in groups %}<a href="#g{{ loop.index }}">{{ g }}</a>{% endfor %}</nav>
+<div>{% for g, items in groups %}<section id="g{{ loop.index }}" class="faqgrp"><h2>{{ g }}</h2>
+{% for q, a in items %}<details class="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}</section>{% endfor %}
+<div class="band"><div><b>{{ t('site.faq_more_t') }}</b><p>{{ t('site.faq_more_d') }}</p></div><a class="btn btn-cde" href="{{ url_for('site.report') }}">{{ t('site.nav_report') }}</a></div>
+</div></div>
+{% endblock %}

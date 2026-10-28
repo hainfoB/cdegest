@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import flashes with context %}
+{% block body %}
+{% include "partials/pubhead.html" %}
+<main id="main">
+  {% block hero %}<section class="pagehero"><div class="wrap"><p class="crumb"><a href="{{ url_for('main.home', public=1) }}">{{ t('nav.home') }}</a> / {% block crumb %}{{ self.title() }}{% endblock %}</p><h1>{{ self.title() }}</h1>{% block lead %}{% endblock %}</div></section>{% endblock %}
+  <div class="wrap sitebody">{{ flashes() }}{% block site %}{% endblock %}</div>
+</main>
+{% include "partials/pubfoot.html" %}
+{% endblock %}

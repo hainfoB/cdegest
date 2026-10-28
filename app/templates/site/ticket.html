@@ -1,0 +1,15 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ t('tk.status_t') }} {{ tk.ref }}{% endblock %}
+{% block crumb %}<a href="{{ url_for('site.report') }}">{{ t('site.nav_report') }}</a>{% endblock %}
+{% block site %}
+{% if new %}<div class="flash flash-ok" role="status">{{ icon('check', 18) }}<span>{{ t('tk.sent', ref=tk.ref) }}</span></div>{% endif %}
+<div class="grid2 site-grid">
+<section class="sitecard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ tk.subject }}</h2><span class="tkst st-{{ tk.status }}">{{ t('tk.st.' ~ tk.status) }}</span></div>
+  <dl class="kv" style="margin-top:14px"><dt>{{ t('tk.ref') }}</dt><dd dir="ltr"><b>{{ tk.ref }}</b></dd><dt>{{ t('tk.category') }}</dt><dd>{{ t('tk.cat.' ~ tk.category) }}</dd><dt>{{ t('tk.date') }}</dt><dd>{{ tk.created_at|dt }}</dd>
+  {% if tk.institute %}<dt>{{ t('tk.institute') }}</dt><dd>{{ tk.institute.name(lang) }}</dd>{% elif tk.wilaya %}<dt>{{ t('dash.table.wilaya') }}</dt><dd>{{ tk.wilaya.name(lang) }}</dd>{% endif %}</dl>
+  <h3 class="sub-t">{{ t('tk.message') }}</h3><p class="pre">{{ tk.message }}</p></section>
+<section class="sitecard"><h2>{{ t('tk.reply') }}</h2>
+  {% if tk.reply %}<p class="pre">{{ tk.reply }}</p><p class="muted small" style="margin-top:10px">{{ tk.handled_at|dt }}</p>{% else %}<p class="muted">{{ t('tk.no_reply') }}</p>{% endif %}
+  <div class="alert alert-info" style="margin-top:16px">{{ t('tk.keep_link') }}<br><code dir="ltr" class="copy">{{ url_for('site.ticket_status', token=tk.token, _external=True) }}</code></div></section>
+</div>
+{% endblock %}

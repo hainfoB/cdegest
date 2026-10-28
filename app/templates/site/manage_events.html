@@ -1,0 +1,31 @@
+{% extends "app.html" %}
+{% block title %}{{ t('nav.events') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.events') }}</h1><p>{{ scope_label }} · {{ rows|length }}</p></div><a class="btn btn-sm btn-line" href="{{ url_for('site.events') }}" target="_blank" rel="noopener">{{ t('ev.see_site') }}</a></div>
+<div class="panel"><table class="tbl"><thead><tr><th>{{ t('sess.dates') }}</th><th>{{ t('ev.title') }}</th><th>{{ t('ev.kind') }}</th><th>{{ t('ev.organiser') }}</th><th>{{ t('ev.state') }}</th><th></th></tr></thead>
+<tbody>{% for e in rows %}<tr class="{{ 'dim' if not e.published }}"><td>{{ e.starts_on|d }}{% if e.ends_on %}<br><small class="muted">{{ e.ends_on|d }}</small>{% endif %}</td><td><b>{{ e.title(lang) }}</b>{% if e.place %}<br><small class="muted">{{ e.place }}</small>{% endif %}</td><td>{{ t('ev.kind.' ~ e.kind) }}</td>
+<td>{{ e.institute.code if e.institute else (e.wilaya.name(lang) if e.wilaya else t('ev.national')) }}</td>
+<td>{% if e.published %}<span class="tkst st-resolved">{{ t('ev.published') }}</span>{% else %}<span class="tkst st-closed">{{ t('ev.draft') }}</span>{% endif %}</td>
+<td class="actions"><a class="btn btn-sm btn-line" href="{{ url_for('site.manage_events', edit=e.id) }}#f">{{ t('edit') }}</a>
+<form method="post" action="{{ url_for('site.event_action', eid=e.id, action='publier') }}" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm {{ 'btn-line' if e.published else 'btn-cde' }}">{{ t('ev.unpublish') if e.published else t('ev.publish') }}</button></form>
+<form method="post" action="{{ url_for('site.event_action', eid=e.id, action='supprimer') }}" style="display:inline" data-confirm="{{ t('ev.confirm_delete') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-line">{{ t('delete') }}</button></form></td></tr>
+{% else %}<tr><td colspan="6" class="muted">{{ t('ev.none') }}</td></tr>{% endfor %}</tbody></table></div>
+
+<form class="panel form" method="post" id="f" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>{{ t('edit') if edit else t('ev.add') }}</h2><input type="hidden" name="id" value="{{ edit.id if edit }}">
+  <div class="fgrid">
+    <div class="field"><label>{{ t('ev.kind') }}</label><select class="input sm" name="kind">{% for k in kinds %}<option value="{{ k }}" {{ 'selected' if edit and edit.kind == k }}>{{ t('ev.kind.' ~ k) }}</option>{% endfor %}</select></div>
+    <div class="field"><label>{{ t('ev.starts') }} *</label><input class="input sm" type="date" name="starts_on" value="{{ edit.starts_on if edit }}" required></div>
+    <div class="field"><label>{{ t('ev.ends') }}</label><input class="input sm" type="date" name="ends_on" value="{{ edit.ends_on if edit and edit.ends_on }}"></div>
+    <div class="field"><label>{{ t('ev.where') }}</label><input class="input sm" name="place" value="{{ edit.place if edit and edit.place }}" maxlength="160"></div>
+    {% if current_user.role in ('admin','mfep') %}<div class="field"><label>{{ t('dash.table.wilaya') }}</label><select class="input sm" name="wilaya"><option value="">{{ t('ev.national') }}</option>{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if edit and edit.wilaya_id == w.id }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>{% endif %}
+    {% if current_user.role != 'resp' and current_user.role != 'mfep' %}<div class="field"><label>{{ t('ev.cde') }}</label><select class="input sm" name="institute"><option value="">{{ t('ev.all_cde') }}</option>{% for i in insts %}<option value="{{ i.id }}" {{ 'selected' if edit and edit.institute_id == i.id }}>{{ i.code }} · {{ i.name(lang) }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="field"><label>{{ t('ev.title') }} (FR) *</label><input class="input sm" name="title_fr" value="{{ edit.title_fr if edit }}" required maxlength="160"></div>
+    <div class="field"><label>{{ t('ev.title') }} (AR) *</label><input class="input sm" name="title_ar" value="{{ edit.title_ar if edit }}" required maxlength="160" dir="rtl"></div>
+  </div>
+  <div class="field"><label>{{ t('ev.body') }} (FR)</label><textarea class="input" name="body_fr" rows="4">{{ edit.body_fr if edit and edit.body_fr }}</textarea></div>
+  <div class="field"><label>{{ t('ev.body') }} (AR)</label><textarea class="input" name="body_ar" rows="4" dir="rtl">{{ edit.body_ar if edit and edit.body_ar }}</textarea></div>
+  <label class="check"><input type="checkbox" name="published" value="1" {{ 'checked' if edit and edit.published }}> {{ t('ev.publish_now') }}</label>
+  <div class="row end">{% if edit %}<a class="btn btn-sm btn-line" href="{{ url_for('site.manage_events') }}">{{ t('cancel') }}</a>{% endif %}<button class="btn btn-cde btn-sm">{{ t('save') }}</button></div>
+</form>
+{% endblock %}

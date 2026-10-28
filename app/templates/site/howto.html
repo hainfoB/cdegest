@@ -1,0 +1,11 @@
+{% extends "site/_site.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block lead %}<p class="lead">{{ c.lead }}</p><div class="ctas"><a class="btn btn-cde" href="{{ url_for('public.apply') }}">{{ t('cta.register') }}</a><a class="btn btn-ghost" href="{{ url_for('public.catalogue') }}">{{ t('nav.program') }}</a></div>{% endblock %}
+{% block site %}
+<ol class="steps">{% for st, d in c.steps %}<li><span class="stepn">{{ loop.index }}</span><div><h3>{{ st }}</h3><p>{{ d }}</p></div></li>{% endfor %}</ol>
+<div class="grid2 site-grid">
+  <section class="sitecard"><h2>{{ c.after_t }}</h2><ul class="ticks">{% for x in c.after %}<li>{{ x }}</li>{% endfor %}</ul></section>
+  <section class="sitecard"><h2>{{ c.need_t }}</h2><ul class="ticks">{% for x in c.need %}<li>{{ x }}</li>{% endfor %}</ul>
+    <p class="muted" style="margin-top:14px">{{ t('site.howto_help') }} <a href="{{ url_for('site.report') }}">{{ t('site.nav_report') }}</a></p></section>
+</div>
+{% endblock %}
