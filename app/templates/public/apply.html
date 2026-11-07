@@ -24,22 +24,22 @@
       <option value="1" {{ 'selected' if d1.get(k) == '1' }}>{{ t('yes') }}</option><option value="0" {{ 'selected' if d1.get(k) == '0' }}>{{ t('no') }}</option></select></div>{% endfor %}
 {% elif step == 2 %}
   <h2>{{ t('apply.s2') }}</h2>
-  <div class="fgrid">
-    <div class="field"><label for="ln">{{ t('pub.last_name') }} *</label><input class="input" id="ln" name="last_name" value="{{ d2.get('last_name','') }}" required></div>
-    <div class="field"><label for="fn">{{ t('pub.first_name') }} *</label><input class="input" id="fn" name="first_name" value="{{ d2.get('first_name','') }}" required></div>
-    <div class="field"><label for="ph">{{ t('pub.phone') }} *</label><input class="input" id="ph" name="phone" dir="ltr" inputmode="tel" value="{{ d2.get('phone','') }}" required placeholder="05 XX XX XX XX"></div>
-    <div class="field"><label for="em">{{ t('login.email') }}</label><input class="input" id="em" type="email" name="email" dir="ltr" value="{{ d2.get('email','') }}"></div>
-    <div class="field"><label for="sx">{{ t('pub.sex') }}</label><select class="input" id="sx" name="sex"><option value="">—</option><option value="F" {{ 'selected' if d2.get('sex')=='F' }}>{{ t('sex.F') }}</option><option value="M" {{ 'selected' if d2.get('sex')=='M' }}>{{ t('sex.M') }}</option></select></div>
-    <div class="field"><label for="bd">{{ t('pub.birth') }}</label><input class="input" id="bd" type="date" name="birth_date" value="{{ d2.get('birth_date','') }}"></div>
-    <div class="field"><label for="wi">{{ t('apply.wilaya') }} *</label><select class="input" id="wi" name="wilaya" required><option value="">—</option>{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if d2.get('wilaya') == w.code }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>
-  </div>
+  <p class="hint">{{ t('apply.s2_hint') }}</p>
+  {% with d = (request.form if request.method == 'POST' else d2) %}{% include "public/_identity.html" %}{% endwith %}
+  <div class="field"><label for="wi">{{ t('apply.wilaya') }} *</label><select class="input" id="wi" name="wilaya" required><option value="">—</option>{% for w in wilayas %}<option value="{{ w.code }}" {{ 'selected' if d2.get('wilaya') == w.code }}>{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>
 {% elif step == 3 %}
   <h2>{{ t('apply.s3') }}</h2>
+  <div class="prof" style="background:#eef6ff">
+    <b>{{ d2.get('first_name') }} {{ d2.get('last_name') }}</b>{% if d2.get('name_ar') %} · {{ d2.get('name_ar') }}{% endif %} · NIN <span dir="ltr">{{ d2.get('nin_masked') }}</span>
+    <span class="srcv {{ d2.get('src') }}">{{ t('src.' ~ d2.get('src')) }}</span><br>
+    {% if d2.get('diploma') %}<small>{{ t('apply.diploma_found') }} : {{ d2.get('diploma') }} ({{ d2.get('diploma_year') }}) <span class="srcv {{ d2.get('dsrc') }}">{{ t('src.' ~ d2.get('dsrc')) }}</span></small><br>{% endif %}
+    {% if d2.get('level') %}<small>{{ t('apply.level_found') }} : {{ d2.get('level') }} <span class="srcv {{ d2.get('lsrc') }}">{{ t('src.' ~ d2.get('lsrc')) }}</span></small>{% endif %}
+  </div>
   <div class="fgrid">
     <div class="field"><label for="ps">{{ t('pub.pstatus') }}</label><select class="input" id="ps" name="pstatus"><option value="diplome">{{ t('pstatus.diplome') }}</option><option value="stagiaire" {{ 'selected' if d3.get('pstatus')=='stagiaire' }}>{{ t('pstatus.stagiaire') }}</option></select></div>
     <div class="field"><label for="or">{{ t('apply.origin') }}</label><select class="input" id="or" name="origin"><option value="">{{ t('apply.other_inst') }}</option>{% for i in origins %}<option value="{{ i.id }}" {{ 'selected' if d3.get('origin') == i.id|string }}>{{ i.name(lang) }}</option>{% endfor %}</select></div>
-    <div class="field"><label for="sp">{{ t('pub.specialty') }} *</label><input class="input" id="sp" name="specialty" value="{{ d3.get('specialty','') }}" required></div>
-    <div class="field"><label for="dy">{{ t('apply.year') }}</label><input class="input" id="dy" name="diploma_year" inputmode="numeric" value="{{ d3.get('diploma_year','') }}" placeholder="2025"></div>
+    <div class="field"><label for="sp">{{ t('pub.specialty') }} *</label><input class="input" id="sp" name="specialty" value="{{ d3.get('specialty', (d2.get('diploma') or '').split(' — ')[-1]) }}" required></div>
+    <div class="field"><label for="dy">{{ t('apply.year') }}</label><input class="input" id="dy" name="diploma_year" inputmode="numeric" value="{{ d3.get('diploma_year', d2.get('diploma_year','')) }}" placeholder="2025"></div>
     <div class="field"><label for="se">{{ t('apply.sector') }}</label><select class="input" id="se" name="sector"><option value="">—</option>{% for s in sectors %}<option value="{{ s }}" {{ 'selected' if d3.get('sector') == s }}>{{ t('sector.' ~ s) }}</option>{% endfor %}</select></div>
   </div>
   <div class="field"><label for="id">{{ t('apply.idea') }}</label><textarea class="input" id="id" name="idea" rows="3">{{ d3.get('idea','') }}</textarea></div>
@@ -48,8 +48,9 @@
   <div class="prof"><b>{{ t('apply.profile') }} : {{ t('profile.' ~ profile) }}</b><br><small>{{ t('profile.' ~ profile ~ '.hint') }}</small></div>
   <p><b>{{ t('apply.cde_in') }} {{ wil.name(lang) if wil }}</b></p>
   <div class="cdes">{% for i in cdes %}<label><input type="radio" name="institute" value="{{ i.id }}" required {{ 'checked' if loop.first }}> <span><b>{{ i.name(lang) }}</b><br><small class="muted">{{ i.code }}</small></span></label>{% else %}<p class="muted">{{ t('apply.no_cde') }}</p>{% endfor %}</div>
-  <p class="muted"><small>{{ d2.get('last_name') }} {{ d2.get('first_name') }} · <span dir="ltr">{{ d2.get('phone') }}</span> · {{ d3.get('specialty') }}</small></p>
-  <label class="check"><input type="checkbox" name="consent" value="1" required> {{ t('pub.consent') }}</label>
+  <p class="muted"><small>{{ d2.get('last_name') }} {{ d2.get('first_name') }} · <span dir="ltr">{{ d2.get('phone') }}</span> · <span dir="ltr">{{ d2.get('email') }}</span> · {{ d3.get('specialty') }}</small></p>
+  {% include "public/_password.html" %}
+  <label class="check"><input type="checkbox" name="consent" value="1" required> {{ t('pub.consent_nin') }}</label>
 {% endif %}
   <div class="row" style="justify-content:space-between;margin-top:14px">
     {% if step > 1 %}<a class="btn btn-line" href="{{ url_for('public.apply', step=step-1) }}">{{ back }} {{ t('apply.prev') }}</a>{% else %}<span></span>{% endif %}

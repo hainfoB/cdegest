@@ -1,0 +1,28 @@
+{% extends "auth/_layout.html" %}
+{% block title %}{{ t('otp.title') }}{% endblock %}
+{% block box %}
+<h2>{{ t('otp.title') }}</h2>
+{% if otp %}
+<p class="sub">{{ t('otp.sent_to', channel=t('ch.' ~ otp.channel)) }}</p>
+{% else %}<p class="sub">{{ t('otp.expired') }}</p>{% endif %}
+{% if error %}<div class="alert alert-bad" role="alert">{{ icon('info', 18) }}<span>{{ error }}</span></div>{% endif %}
+<form method="post" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="code">{{ t('otp.label') }}</label>
+    <input class="input" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" dir="ltr" maxlength="6" pattern="[0-9]{6}" required autofocus style="letter-spacing:.4em;font-size:22px;text-align:center"></div>
+  <button class="btn btn-cde btn-block" type="submit">{{ icon('check', 18) }} {{ t('otp.submit') }}</button>
+</form>
+<form method="post" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="resend">
+  <span class="hint">{{ t('otp.not_received') }}</span>
+  {% for ch in channels %}<button class="btn btn-sm btn-line" name="channel" value="{{ ch }}">{{ t('ch.' ~ ch) }}</button>{% endfor %}
+</form>
+<p class="hint">{{ t('otp.rules') }}</p>
+{% if simulated %}
+<div class="simmsg" role="note">
+  <div class="simhead">{{ icon('message', 14) }} {{ t('sim.title') }} · {{ t('ch.' ~ simulated.channel) }} · <span dir="ltr">{{ simulated.to_masked }}</span></div>
+  <div class="simbody" dir="{{ 'rtl' if simulated.lang == 'ar' else 'ltr' }}">{{ simulated.body }}</div>
+  <small>{{ t('sim.note') }}</small>
+</div>
+{% endif %}
+{% endblock %}

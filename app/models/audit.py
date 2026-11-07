@@ -11,6 +11,7 @@ class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
     user_label = db.Column(db.String(150))
+    role = db.Column(db.String(12), index=True)                     # rôle actif au moment de l'action
     action = db.Column(db.String(60), nullable=False)
     target = db.Column(db.String(80))
     details = db.Column(db.String(300))
@@ -27,7 +28,8 @@ class AuditLog(db.Model):
             target=target,
             details=(details or "")[:300],
             user_id=getattr(u, "id", None),
-            user_label=getattr(u, "email", None),
+            user_label=getattr(u, "name", None),
+            role=getattr(u, "role", None),
             wilaya_id=getattr(getattr(u, "scope_wilaya", None), "id", None),
             institute_id=getattr(u, "institute_id", None),
             ip=(request.headers.get("X-Forwarded-For", request.remote_addr) or "")[:45] if request else None,

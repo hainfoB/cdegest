@@ -1,11 +1,43 @@
 {% extends "app.html" %}
 {% block title %}{{ t('acc.title') }}{% endblock %}
 {% block content %}
-<div class="pagehead"><div><h1>{{ t('acc.title') }}</h1><p>{{ current_user.email }} · {{ t('role.' ~ current_user.role) }}</p></div></div>
+<div class="pagehead"><div><h1>{{ t('acc.title') }}</h1><p>{{ current_user.name }} · NIN <span dir="ltr">{{ current_user.nin_masked }}</span> · <span class="srcv {{ current_user.identity_source }}">{{ t('src.' ~ current_user.identity_source) }}</span></p></div></div>
 {% if current_user.must_change_password %}<div class="flash flash-err">{{ t('acc.must_change') }}</div>{% endif %}
-<form class="panel form" method="post" style="max-width:520px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+<section class="panel" style="margin-bottom:18px">
+  <h2>{{ t('acc.roles') }}</h2>
+  <table class="tbl"><thead><tr><th>{{ t('users.role') }}</th><th>{{ t('users.scope') }}</th><th>{{ t('hab.period') }}</th><th>{{ t('hab.by') }}</th><th>{{ t('xl.status') }}</th></tr></thead>
+  <tbody>{% for h in habs %}<tr class="{{ 'dim' if not h.is_valid() }}"><td><b>{{ t('role.' ~ h.role) }}</b>{% if active_hab and h.id == active_hab.id %} <span class="activerole">{{ t('role.active') }}</span>{% endif %}</td>
+  <td>{{ h.scope_name(lang) }}</td><td>{{ h.starts_on|d }}{% if h.ends_on %} → {{ h.ends_on|d }}{% endif %}</td>
+  <td>{{ h.granted_by.name if h.granted_by else t('hab.auto') }}</td><td>{{ t('hab.st.' ~ h.status) }}</td></tr>{% endfor %}</tbody></table>
+</section>
+
+<form class="panel form" method="post" style="margin-bottom:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="section" value="contact">
+  <h2>{{ t('acc.contact') }}</h2>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('login.email') }}</label><input class="input sm" type="email" name="email" dir="ltr" value="{{ current_user.email or '' }}">
+      <p class="hint">{{ t('acc.verified') if current_user.email_verified_at else t('acc.unverified') }}</p></div>
+    <div class="field"><label>{{ t('acc.phone_sms') }}</label><input class="input sm" name="phone" dir="ltr" value="{{ current_user.phone or '' }}">
+      <p class="hint">{{ t('acc.verified') if current_user.phone_verified_at else t('acc.unverified') }}</p></div>
+    <div class="field"><label>{{ t('acc.whatsapp') }}</label><input class="input sm" name="whatsapp" dir="ltr" value="{{ current_user.whatsapp or '' }}" placeholder="{{ t('acc.same_phone') }}"></div>
+  </div>
+  <fieldset class="field"><legend>{{ t('acc.mobile') }}</legend>
+    <label class="check"><input type="radio" name="mobile" value="sms" {{ 'checked' if current_user.mobile_channel != 'whatsapp' }}> {{ t('ch.sms') }}</label>
+    <label class="check"><input type="radio" name="mobile" value="whatsapp" {{ 'checked' if current_user.mobile_channel == 'whatsapp' }}> {{ t('ch.whatsapp') }}</label>
+    <label class="check"><input type="checkbox" name="wa_consent" value="1" {{ 'checked' if current_user.wa_consent_at }}> {{ t('wa.consent') }}</label>
+    <p class="hint">{{ t('wa.notice') }}</p>
+  </fieldset>
+  <div class="field"><label>{{ t('acc.code_channel') }}</label><select class="input sm" name="code" style="max-width:260px">
+    {% for c in ('email','sms','whatsapp') %}<option value="{{ c }}" {{ 'selected' if current_user.code_channel == c }}>{{ t('ch.' ~ c) }}</option>{% endfor %}</select></div>
+  <label class="check"><input type="checkbox" name="reminders" value="1" {{ 'checked' if current_user.reminders }}> {{ t('acc.reminders') }}</label>
+  <p class="hint">{{ t('acc.reminders_hint') }}</p>
+  <button class="btn btn-cde">{{ t('save') }}</button>
+</form>
+
+<form class="panel form" method="post" style="max-width:520px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="section" value="password">
+  <h2>{{ t('acc.password') }}</h2>
   <div class="field"><label for="old">{{ t('acc.old') }}</label><input class="input" type="password" id="old" name="old" autocomplete="current-password" required dir="ltr"></div>
-  <div class="field"><label for="new">{{ t('acc.new') }}</label><input class="input" type="password" id="new" name="new" minlength="10" autocomplete="new-password" required dir="ltr"><p class="hint">{{ t('acc.rule') }}</p></div>
+  <div class="field"><label for="new">{{ t('acc.new') }}</label><input class="input" type="password" id="new" name="new" minlength="10" autocomplete="new-password" required dir="ltr"><p class="hint">{{ t('acc.rule') if not current_user.is_agent else t('acc.rule12') }}</p></div>
   <div class="field"><label for="new2">{{ t('acc.new2') }}</label><input class="input" type="password" id="new2" name="new2" minlength="10" autocomplete="new-password" required dir="ltr"></div>
   <button class="btn btn-cde">{{ t('save') }}</button>
 </form>

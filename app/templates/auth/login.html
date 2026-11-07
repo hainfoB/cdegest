@@ -1,58 +1,38 @@
-{% extends "base.html" %}
-{% from "partials/icons.html" import icon %}
+{% extends "auth/_layout.html" %}
 {% block title %}{{ t('login.title') }}{% endblock %}
-{% block body %}
-<div class="auth">
-  <aside class="auth-side">
-    {% include "partials/net.html" %}
-    <a class="logo" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE" style="height:84px"></a>
-    <div>
-      <h1>{{ t('home.title') }}</h1>
-      <p>{{ t('brand.platform') }}</p>
-    </div>
-    <p style="font-size:13px;color:var(--mut)">© {{ today.year }} · {{ t('footer.rights') }}</p>
-  </aside>
-
-  <main class="auth-main" id="main">
-    <div class="auth-box">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:28px">{% include "partials/langsw.html" %}</div>
-      <h2>{{ t('login.title') }}</h2>
-      <p class="sub">{{ t('login.subtitle') }}</p>
-
-      {% if error %}<div class="alert alert-bad" role="alert">{{ icon('info', 18) }}<span>{{ error }}</span></div>{% endif %}
-
-      <form method="post" novalidate>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="field"><label for="email">{{ t('login.email') }}</label>
-          <input class="input" id="email" name="email" type="email" autocomplete="username" dir="ltr" required value="{{ email }}"></div>
-        <div class="field"><label for="password">{{ t('login.password') }}</label>
-          <input class="input" id="password" name="password" type="password" autocomplete="current-password" dir="ltr" required></div>
-        <label class="check"><input type="checkbox" name="remember" value="1"> {{ t('login.remember') }}</label>
-        <button class="btn btn-cde btn-block" type="submit">{{ icon('lock', 18) }} {{ t('login.submit') }}</button>
-      </form>
-
-      {% if demo %}
-      <section class="demo" aria-labelledby="demo-t">
-        <h3 id="demo-t">{{ t('login.demo.title') }}</h3>
-        <p class="hint">{{ t('login.demo.hint') }}</p>
-        <div class="demo-list">
-          {% for d in demo %}
-          <button type="button" class="demo-acc" data-email="{{ d.email }}">
-            <span class="av">{{ icon('user', 18) }}</span>
-            <span><b>{{ t('role.' ~ d.role) }}{% if d.scope %} · {{ d.scope[lang] }}{% endif %}</b><small>{{ d.email }}</small></span>
-          </button>
-          {% endfor %}
-        </div>
-      </section>
-      <script>
-      document.querySelectorAll('.demo-acc').forEach(b=>b.addEventListener('click',()=>{
-        document.querySelectorAll('.demo-acc').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');
-        document.getElementById('email').value=b.dataset.email;
-        document.getElementById('password').focus();
-      }));
-      </script>
-      {% endif %}
-    </div>
-  </main>
-</div>
+{% block box %}
+<h2>{{ t('login.title') }}</h2>
+<p class="sub">{{ t('login.subtitle_nin') }}</p>
+{% if error %}<div class="alert alert-bad" role="alert">{{ icon('info', 18) }}<span>{{ error }}</span></div>{% endif %}
+<form method="post" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="nin">{{ t('login.nin') }}</label>
+    <input class="input" id="nin" name="nin" inputmode="numeric" autocomplete="username" dir="ltr" required maxlength="22" placeholder="18 {{ t('login.digits') }}" value="{{ nin }}"></div>
+  <div class="field"><label for="password">{{ t('login.password') }}</label>
+    <input class="input" id="password" name="password" type="password" autocomplete="current-password" dir="ltr" required></div>
+  <label class="check"><input type="checkbox" name="remember" value="1"> {{ t('login.remember') }}</label>
+  <button class="btn btn-cde btn-block" type="submit">{{ icon('lock', 18) }} {{ t('login.submit') }}</button>
+</form>
+<p style="margin-top:14px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+  <a href="{{ url_for('auth.forgot') }}">{{ t('login.forgot') }}</a>
+  <a href="{{ url_for('public.apply') }}">{{ t('login.new_candidate') }}</a></p>
+{% if demo %}
+<section class="demo" aria-labelledby="demo-t">
+  <h3 id="demo-t">{{ t('login.demo.title') }}</h3>
+  <p class="hint">{{ t('login.demo.hint') }}</p>
+  <div class="demo-list">
+    {% for d in demo %}
+    <button type="button" class="demo-acc" data-nin="{{ d.nin }}">
+      <span class="av">{{ icon('user', 18) }}</span>
+      <span><b>{{ d.name }}</b><small dir="ltr">{{ d.nin }}</small></span>
+    </button>
+    {% endfor %}
+  </div>
+</section>
+<script>
+document.querySelectorAll('.demo-acc').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.demo-acc').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');
+  document.getElementById('nin').value=b.dataset.nin;document.getElementById('password').focus();}));
+</script>
+{% endif %}
 {% endblock %}

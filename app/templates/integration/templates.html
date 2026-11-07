@@ -1,0 +1,11 @@
+{% extends "app.html" %}
+{% block title %}{{ t('out.catalog') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('out.catalog') }}</h1><p>{{ t('out.catalog_hint') }}</p></div>
+  <a class="btn btn-sm btn-line" href="{{ url_for('integration.outbox') }}">{{ back }} {{ t('nav.outbox') }}</a></div>
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('out.code') }}</th><th>{{ t('out.cat') }}</th><th>Français</th><th>العربية</th></tr></thead>
+<tbody>{% for c, sp in CATALOG.items() %}<tr><td><b>{{ c }}</b><br><small>{{ sp.label[lang] if lang in sp.label else sp.label.fr }}</small></td><td><span class="badge b-ink">{{ sp.cat }} · {{ CAT[sp.cat][lang] }}</span></td>
+<td><div class="bubble" dir="ltr">{{ sp.text.fr }}</div></td><td><div class="bubble" dir="rtl">{{ sp.text.ar }}</div></td></tr>{% endfor %}</tbody></table></div>
+<section class="panel" style="margin-top:18px"><h2>{{ t('out.rules') }}</h2><ul>
+{% for k in ('r1','r2','r3','r4','r5','r6','r7') %}<li>{{ t('out.rule.' ~ k) }}</li>{% endfor %}</ul></section>
+{% endblock %}

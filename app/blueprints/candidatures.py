@@ -26,6 +26,7 @@ def _scope():
 @roles_required(ADMIN, DFEP, COORD, RESP)
 def index():
     st, q = request.args.get("st"), (request.args.get("q") or "").strip()
+    unver = request.args.get("v") == "0"
     base = _scope()
     allc = base.all()
     counts = Counter(c.status for c in allc)
@@ -33,13 +34,58 @@ def index():
     rows = base
     if st in STATUSES:
         rows = rows.filter(Candidature.status == st)
+    if unver:                                   # US-1204 : dossiers restés « non vérifiés »
+        rows = rows.filter(Candidature.identity_source != "etat_civil", Candidature.status.in_(("nouvelle", "retenue")))
     if q:
         like = f"%{q}%"
         rows = rows.filter(db.or_(Candidature.last_name.ilike(like), Candidature.first_name.ilike(like),
                                   Candidature.phone.ilike(like)))
     rows = rows.order_by(Candidature.created_at.desc()).limit(300).all()
+    n_unver = sum(1 for c in allc if c.identity_source != "etat_civil" and c.status in ("nouvelle", "retenue"))
+    sessions = Session.query.filter(Session.institute_id.in_(visible_institute_ids(current_user) or [-1]),
+                                    Session.status == "open").order_by(Session.starts_on).all()
     return render_template("candidatures/index.html", rows=rows, st=st, q=q, counts=counts, total=len(allc),
-                           statuses=STATUSES, profiles=profiles, plist=PROFILES)
+                           statuses=STATUSES, profiles=profiles, plist=PROFILES, unver=unver, n_unver=n_unver,
+                           open_sessions=sessions)
+
+
+@bp.route("/lot", methods=["POST"])
+@roles_required(ADMIN, DFEP, COORD, RESP)
+def bulk():
+    """US-207 : orienter ou refuser plusieurs demandes en une fois (même session ou même motif)."""
+    ids = [int(x) for x in request.form.getlist("ids") if x.isdigit()]
+    act = request.form.get("action")
+    rows = _scope().filter(Candidature.id.in_(ids or [-1]), Candidature.status.in_(("nouvelle", "retenue"))).all()
+    from ..services import events as E
+    n = 0
+    if act == "reject":
+        note = (request.form.get("note") or "").strip()
+        if not note:
+            flash(t("cand.need_reason"), "err")
+            return redirect(url_for(".index"))
+        for c in rows:
+            c.status, c.note = "refusee", note[:500]
+            c.reviewed_by_id, c.reviewed_at = current_user.id, utcnow()
+            E.candidature_rejected(c)
+            n += 1
+    elif act == "orient":
+        s = db.session.get(Session, request.form.get("session", type=int) or -1)
+        if s is None or s.status != "open" or s.institute_id not in visible_institute_ids(current_user):
+            abort(400)
+        for c in rows:
+            if c.institute_id != s.institute_id:
+                continue
+            c.enrollment = _enroll(c, s)
+            c.status = "orientee"
+            c.reviewed_by_id, c.reviewed_at = current_user.id, utcnow()
+            E.candidature_oriented(c, s)
+            n += 1
+    else:
+        abort(400)
+    AuditLog.log(f"candidature.bulk.{act}", details=f"{n} demande(s)")
+    db.session.commit()
+    flash(t("cand.bulk_done", n=n), "ok")
+    return redirect(url_for(".index", st=request.args.get("st")))
 
 
 @bp.route("/<int:cid>", methods=["GET", "POST"])
@@ -50,6 +96,24 @@ def detail(cid):
                 .order_by(Session.starts_on).all())
     if request.method == "POST":
         act = request.form.get("action")
+        from ..services import events as E
+        if act == "recheck":                    # relancer la vérification auprès des administrations
+            from ..services import connectors as CN
+            raw = c.nin
+            if raw:
+                st, data, src = CN.identity(raw)
+                if st == "trouve":
+                    CN.apply_identity(c, st, data, src)
+                _s2, dip, dsrc = CN.diplomas(raw)
+                if dip:
+                    c.diploma, c.diploma_source = f"{dip[0]['diplome']} — {dip[0]['specialite']}", dsrc
+                _s3, lev, lsrc = CN.level(raw)
+                if lev:
+                    c.level, c.level_source = lev["libelle"], lsrc
+                AuditLog.log("candidature.recheck", target=f"candidature:{c.id}", details=st)
+                db.session.commit()
+                flash(t("cand.rechecked", st=t("ec." + st)), "ok")
+            return redirect(url_for(".detail", cid=c.id))
         if act == "retain" and c.status == "nouvelle":
             c.status = "retenue"
         elif act == "reject" and c.status in ("nouvelle", "retenue"):
@@ -58,12 +122,14 @@ def detail(cid):
                 flash(t("cand.need_reason"), "err")
                 return redirect(url_for(".detail", cid=c.id))
             c.status, c.note = "refusee", note[:500]
+            E.candidature_rejected(c)
         elif act == "orient" and c.status in ("nouvelle", "retenue"):
             s = next((x for x in sessions if x.id == request.form.get("session", type=int)), None)
             if not s:
                 abort(400)
             c.enrollment = _enroll(c, s)
             c.status = "orientee"
+            E.candidature_oriented(c, s)
         else:
             abort(400)
         c.reviewed_by_id, c.reviewed_at = current_user.id, utcnow()
@@ -75,8 +141,15 @@ def detail(cid):
 
 
 def _enroll(c, s):
-    p = Participant.query.filter_by(phone=c.phone).first() if c.phone else None
+    p = Participant.query.filter_by(nin_hash=c.nin_hash).first() if c.nin_hash else None
+    if p is None and not c.nin_hash and c.phone:
+        p = Participant.query.filter_by(phone=c.phone, nin_hash=None).first()
     p = p or Participant(phone=c.phone)
+    if c.nin_hash:
+        p.nin_hash, p.nin_enc = c.nin_hash, c.nin_enc
+    p.user_id = c.user_id or p.user_id
+    p.identity_source = c.identity_source or p.identity_source
+    p.diploma, p.diploma_source, p.level, p.level_source = c.diploma, c.diploma_source, c.level, c.level_source
     p.last_name, p.first_name, p.email = c.last_name, c.first_name, c.email or p.email
     p.sex, p.birth_date = c.sex or p.sex, c.birth_date or p.birth_date
     p.wilaya_id, p.origin_institute_id = c.wilaya_id, c.origin_institute_id or p.origin_institute_id

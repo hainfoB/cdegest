@@ -17,14 +17,16 @@ KPI_FAMILIES = [
     ("attendance", ["attendance", "dropouts", "dropout_rate", "certificates"]),
     ("conversion", ["accepted", "conversion", "completed"]),
     ("quality", ["satisfaction", "response"]),
+    ("demand", ["demands", "decision_days", "verified"]),
 ]
 KPIS = [k for _f, ks in KPI_FAMILIES for k in ks]
-RATES = {"fill", "attendance", "dropout_rate", "conversion", "satisfaction", "response", "slots_held"}
-LOWER_IS_BETTER = {"dropout_rate", "dropouts"}
+RATES = {"fill", "attendance", "dropout_rate", "conversion", "satisfaction", "response", "slots_held", "verified"}
+LOWER_IS_BETTER = {"dropout_rate", "dropouts", "decision_days"}
 KPI_ICONS = {
     "groups": "users", "sessions": "layers", "trained": "user-check", "teachers": "briefcase", "hours": "clock",
     "fill": "pie", "attendance": "check", "dropouts": "user-x", "dropout_rate": "trend-down", "certificates": "award",
     "accepted": "thumb", "conversion": "repeat", "completed": "flag", "satisfaction": "smile", "response": "message",
+    "demands": "user-check", "decision_days": "clock", "verified": "shield",
 }
 
 
@@ -37,7 +39,8 @@ def _minutes(s, e):
 def _empty():
     return dict(groups=0, sessions=0, participants=set(), teachers=set(), minutes=0, present=0, total=0,
                 seats=0, confirmed=0, dropouts=0, started=set(), certs=0, responses=0, satisfied=0,
-                eligible=0, accepted=set(), completed=set(), slots=0, cancelled=0)
+                eligible=0, accepted=set(), completed=set(), slots=0, cancelled=0,
+                demands=0, decision=[], verified=0)
 
 
 def raw_by_institute(inst_ids, start, end):
@@ -135,6 +138,18 @@ def raw_by_institute(inst_ids, start, end):
                            Enrollment.dropout.is_(False))
                    .group_by(Session.institute_id)):
         R[iid]["eligible"] += n
+
+    # I16 à I18 : demandes reçues, délai de décision, identités vérifiées (CDC fonctionnel v1.3)
+    from ..models import Candidature
+    for c in (Candidature.query.with_entities(Candidature.institute_id, Candidature.created_at, Candidature.reviewed_at,
+                                              Candidature.status, Candidature.identity_source)
+              .filter(Candidature.institute_id.in_(ids), Candidature.created_at >= t0, Candidature.created_at < t1)):
+        r = R[c[0]]
+        r["demands"] += 1
+        if c[4] == "etat_civil":
+            r["verified"] += 1
+        if c[2] is not None and c[3] in ("orientee", "refusee"):
+            r["decision"] = r["decision"] + [max(0, (c[2] - c[1]).days)]
     return R
 
 
@@ -144,9 +159,19 @@ def merge(raws):
         for k, v in r.items():
             if isinstance(v, set):
                 out[k] = out[k] | v
+            elif isinstance(v, list):
+                out[k] = out[k] + v
             else:
                 out[k] += v
     return out
+
+
+def _median(xs):
+    if not xs:
+        return None
+    xs = sorted(xs)
+    m = len(xs) // 2
+    return xs[m] if len(xs) % 2 else round((xs[m - 1] + xs[m]) / 2, 1)
 
 
 def _pct(a, b):
@@ -171,6 +196,9 @@ def finalize(r):
         "completed": len(r["completed"]),
         "satisfaction": _pct(r["satisfied"], r["responses"]),
         "response": _pct(r["responses"], r["eligible"]),
+        "demands": r["demands"],
+        "decision_days": _median(r["decision"]),
+        "verified": _pct(r["verified"], r["demands"]),
         # complementary indicators (tables), not part of the 15 targeted KPIs
         "teacher_abs": r["cancelled"],
         "slots_held": _pct(r["slots"] - r["cancelled"], r["slots"]),
@@ -200,6 +228,8 @@ def kpi_status(kpi, value, target, period):
     reached = value <= target if lower else value >= target
     if period.finished:
         return "met" if reached else "missed"
+    if kpi == "decision_days":                     # une durée : pas de prorata
+        return "track" if reached else "late"
     if lower and kpi not in RATES:
         # a count where less is better: on track while below the prorated ceiling
         return "track" if value <= target * period.elapsed else "late"
@@ -265,4 +295,6 @@ def fmt(kpi, v):
         return "—"
     if kpi in RATES:
         return f"{v:.0f} %" if v == int(v) else f"{v:.1f} %"
+    if kpi == "decision_days":
+        return f"{v:g} j"
     return f"{int(v):,}".replace(",", " ")

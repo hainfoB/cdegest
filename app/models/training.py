@@ -10,6 +10,16 @@ def _tok():
     return secrets.token_urlsafe(16)
 
 
+def _nin_get(obj):
+    from .. import nin as NIN
+    return NIN.decrypt(obj.nin_enc)
+
+
+def _nin_set(obj, raw):
+    from .. import nin as NIN
+    obj.nin_hash, obj.nin_enc = NIN.fingerprint(raw), NIN.encrypt(raw)
+
+
 # ------------------------------------------------------------------ référentiel (MFEP)
 
 class WorkshopTemplate(db.Model):
@@ -224,6 +234,15 @@ class Slot(db.Model):
 class Participant(db.Model):
     __tablename__ = "participant"
     id = db.Column(db.Integer, primary_key=True)
+    nin_hash = db.Column(db.String(64), index=True)
+    nin_enc = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+    identity_source = db.Column(db.String(12), default="declaratif")   # etat_civil | simule | declaratif
+    identity_checked_at = db.Column(db.DateTime)
+    level = db.Column(db.String(20))                                     # niveau scolaire (Éducation nationale)
+    level_source = db.Column(db.String(12))
+    diploma = db.Column(db.String(160))                                  # diplôme (SI du MFEP)
+    diploma_source = db.Column(db.String(12))
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     sex = db.Column(db.String(1))                                     # F | M
@@ -244,10 +263,18 @@ class Participant(db.Model):
     wilaya = db.relationship("Wilaya")
     origin_institute = db.relationship("Institute")
     enrollments = db.relationship("Enrollment", back_populates="participant")
+    user = db.relationship("User", foreign_keys=[user_id])
 
     @property
     def full_name(self):
         return f"{self.last_name} {self.first_name}"
+
+    nin = property(lambda self: _nin_get(self), lambda self, v: _nin_set(self, v))
+
+    @property
+    def nin_masked(self):
+        from .. import nin as NIN
+        return NIN.mask(self.nin)
 
 
 class Enrollment(db.Model):
@@ -355,6 +382,15 @@ class Candidature(db.Model):
     puis oriente le candidat vers une session (ce qui crée le participant et son inscription)."""
     __tablename__ = "candidature"
     id = db.Column(db.Integer, primary_key=True)
+    nin_hash = db.Column(db.String(64), index=True)
+    nin_enc = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
+    identity_source = db.Column(db.String(12), default="declaratif")   # etat_civil | simule | declaratif
+    identity_checked_at = db.Column(db.DateTime)
+    level = db.Column(db.String(20))                                     # niveau scolaire (Éducation nationale)
+    level_source = db.Column(db.String(12))
+    diploma = db.Column(db.String(160))                                  # diplôme (SI du MFEP)
+    diploma_source = db.Column(db.String(12))
     ref = db.Column(db.String(40), unique=True, nullable=False, default=_tok)
     answers = db.Column(db.String(60), default="")          # ex. "discover=1,skills=0,..."
     last_name = db.Column(db.String(80), nullable=False)
@@ -385,6 +421,23 @@ class Candidature(db.Model):
     institute = db.relationship("Institute", foreign_keys=[institute_id])
     origin_institute = db.relationship("Institute", foreign_keys=[origin_institute_id])
     enrollment = db.relationship("Enrollment")
+    user = db.relationship("User", foreign_keys=[user_id])
+
+    nin = property(lambda self: _nin_get(self), lambda self, v: _nin_set(self, v))
+
+    @property
+    def nin_masked(self):
+        from .. import nin as NIN
+        return NIN.mask(self.nin)
+
+    @property
+    def verified(self):
+        return self.identity_source == "etat_civil"
+
+    @property
+    def short_ref(self):
+        w = self.institute.wilaya.code if self.institute is not None else "00"
+        return f"CDE{w}-{self.id:05d}"
 
     @property
     def full_name(self):

@@ -1,0 +1,11 @@
+{% extends "auth/_layout.html" %}
+{% block title %}{{ t('charter.title') }}{% endblock %}
+{% block box %}
+<h2>{{ t('charter.title') }}</h2>
+<div class="panel" style="line-height:1.8">{{ t('charter.text') }}</div>
+<form method="post" style="margin-top:14px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label class="check"><input type="checkbox" name="charter" value="1" required> {{ t('charter.accept') }}</label>
+  <button class="btn btn-cde btn-block" type="submit">{{ t('charter.submit') }}</button>
+</form>
+{% endblock %}

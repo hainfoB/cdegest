@@ -9,10 +9,21 @@
   <div class="app-title"><b>CDEgest</b><span>{{ scope_label }}</span></div>
   <div class="head-sp"></div>
   {% include "partials/langsw.html" %}
-  <a class="userchip" href="{{ url_for('org.account') }}" style="text-decoration:none;color:inherit" title="{{ t('acc.title') }}">
-    <div class="who"><b>{{ current_user.name }}</b><small>{{ t('role.' ~ current_user.role) }}</small></div>
-    <span class="av" aria-hidden="true">{{ current_user.name[:1] }}</span>
-  </a>
+  <details class="roleswitch">
+    <summary class="userchip" title="{{ t('role.switch') }}">
+      <div class="who"><b>{{ current_user.name }}</b><small>{{ t('role.' ~ current_user.role) }}{% if my_habs|length > 1 %} ▾{% endif %}</small></div>
+      <span class="av" aria-hidden="true">{{ current_user.name[:1] }}</span>
+    </summary>
+    <div class="menu">
+      <small style="padding:4px 10px;display:block">{{ t('role.active_label') }}</small>
+      <form method="post" action="{{ url_for('auth.switch_role') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% for h in my_habs %}
+        <button name="hab" value="{{ h.id }}" class="{{ 'on' if active_hab and h.id == active_hab.id }}"><b>{{ t('role.' ~ h.role) }}</b><small>{{ h.scope_name(lang) }}</small></button>
+      {% endfor %}</form>
+      <div class="sep"></div>
+      <a href="{{ url_for('org.account') }}"><b>{{ t('acc.title') }}</b><small>{{ t('acc.menu_hint') }}</small></a>
+    </div>
+  </details>
   <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="iconbtn" type="submit" title="{{ t('logout') }}" aria-label="{{ t('logout') }}">{{ icon('logout', 18) }}</button></form>
 </div></header>
@@ -26,9 +37,12 @@
       <a href="{{ url_for(endpoint) }}" class="{{ 'on' if on }}" {% if on %}aria-current="page"{% endif %}>{{ icon(ic) }}{{ t(key) }}</a>
     {% endfor %}
   </nav>
-  <main class="main" id="main">{{ flashes() }}{% block content %}{% endblock %}</main>
+  <main class="main" id="main">
+    {% if active_hab %}<p class="activerole" style="margin-bottom:12px">{{ icon('shield', 13) }} {{ t('role.active_label') }} : {{ t('role.' ~ active_hab.role) }} · {{ active_hab.scope_name(lang) }}</p>{% endif %}
+    {{ flashes() }}{% block content %}{% endblock %}</main>
 </div>
 <script>
+document.addEventListener('click',e=>{document.querySelectorAll('details.roleswitch[open]').forEach(d=>{if(!d.contains(e.target))d.removeAttribute('open')})});
 (()=>{const b=document.getElementById('menuBtn'),s=document.getElementById('side');if(!b)return;
 b.addEventListener('click',()=>{const o=s.classList.toggle('open');b.setAttribute('aria-expanded',o)});})();
 document.querySelectorAll('form[data-confirm]').forEach(f=>f.addEventListener('submit',e=>{if(!confirm(f.dataset.confirm))e.preventDefault()}));

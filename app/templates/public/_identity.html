@@ -1,0 +1,25 @@
+{# Identité par NIN et coordonnées (RG-01, RG-39, RG-44) — paramètres : d (valeurs), logged #}
+{% if logged %}
+<div class="prof" style="padding:12px;border-radius:12px;background:#eef6ff;margin-bottom:12px">{{ t('nin.logged', name=current_user.name) }} · NIN <span dir="ltr">{{ current_user.nin_masked }}</span></div>
+{% else %}
+<div class="fgrid">
+  <div class="field"><label for="nin">{{ t('login.nin') }} *</label><input class="input" id="nin" name="nin" inputmode="numeric" dir="ltr" maxlength="22" required placeholder="18 {{ t('login.digits') }}" value="{{ d.get('nin','') }}"><p class="hint">{{ t('nin.why') }}</p></div>
+  <div class="field"><label for="bd">{{ t('pub.birth') }} *</label><input class="input" id="bd" type="date" name="birth_date" required value="{{ d.get('birth_date','') }}"></div>
+</div>
+<details style="margin:-4px 0 12px"><summary class="hint">{{ t('nin.manual') }}</summary>
+<div class="fgrid">
+  <div class="field"><label for="ln">{{ t('pub.last_name') }}</label><input class="input" id="ln" name="last_name" autocomplete="family-name"></div>
+  <div class="field"><label for="fn">{{ t('pub.first_name') }}</label><input class="input" id="fn" name="first_name" autocomplete="given-name"></div>
+  <div class="field"><label for="sx">{{ t('pub.sex') }}</label><select class="input" id="sx" name="sex"><option value="">—</option><option value="F">{{ t('sex.F') }}</option><option value="M">{{ t('sex.M') }}</option></select></div>
+</div></details>
+{% endif %}
+<div class="fgrid">
+  <div class="field"><label for="ph">{{ t('pub.phone') }} *</label><input class="input" id="ph" name="phone" required inputmode="tel" dir="ltr" placeholder="05 XX XX XX XX" autocomplete="tel" value="{{ d.get('phone', current_user.phone if logged else '') or '' }}"></div>
+  <div class="field"><label for="em">{{ t('login.email') }} *</label><input class="input" id="em" type="email" name="email" dir="ltr" required autocomplete="email" value="{{ d.get('email', current_user.email if logged else '') or '' }}"></div>
+</div>
+<fieldset class="field"><legend>{{ t('pub.mobile_channel') }}</legend>
+  <label class="check" style="margin-bottom:6px"><input type="radio" name="mobile" value="sms" {{ 'checked' if d.get('mobile') != 'whatsapp' }}> {{ t('ch.sms') }}</label>
+  <label class="check" style="margin-bottom:6px"><input type="radio" name="mobile" value="whatsapp" {{ 'checked' if d.get('mobile') == 'whatsapp' }}> {{ t('ch.whatsapp') }}</label>
+  <label class="check" style="margin-bottom:6px"><input type="checkbox" name="wa_consent" value="1" {{ 'checked' if d.get('wa_consent') }}> {{ t('wa.consent') }}</label>
+  <p class="hint">{{ t('pub.mobile_hint') }}</p>
+</fieldset>

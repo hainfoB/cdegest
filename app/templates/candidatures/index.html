@@ -7,18 +7,27 @@
 <div class="minicards" style="margin-bottom:12px">
   <a class="mc {{ 'today' if not st }}" href="{{ url_for('.index') }}"><small>{{ t('obj.all') }}</small><span class="big-n">{{ total }}</span></a>
   {% for k in statuses %}<a class="mc {{ 'today' if st == k }}" href="{{ url_for('.index', st=k) }}"><small>{{ t('cand.' ~ k) }}</small><span class="big-n">{{ counts[k] }}</span></a>{% endfor %}
+  <a class="mc {{ 'today' if unver }}" href="{{ url_for('.index', v='0') }}"><small>{{ t('cand.unverified') }}</small><span class="big-n">{{ n_unver }}</span></a>
 </div>
 <p class="muted" style="margin:0 0 16px"><small>{{ t('apply.profile') }} : {% for p in plist %}{{ t('profile.' ~ p) }} <b>{{ profiles[p] }}</b>{{ ' · ' if not loop.last }}{% endfor %}</small></p>
 <div class="panel">
   <form class="tools" method="get"><input type="hidden" name="st" value="{{ st or '' }}">
     <label class="searchbox">{{ icon('search', 18) }}<input type="search" name="q" value="{{ q }}" placeholder="{{ t('nesda.search') }}" aria-label="{{ t('nesda.search') }}"></label></form>
-  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>N°</th><th>{{ t('users.name') }}</th><th>{{ t('pub.specialty') }}</th><th>{{ t('apply.profile') }}</th><th>CDE</th><th>{{ t('cand.received') }}</th><th>{{ t('cand.status_col') }}</th></tr></thead>
-  <tbody>{% for c in rows %}<tr><td><a href="{{ url_for('.detail', cid=c.id) }}">{{ '%06d'|format(c.id) }}</a></td>
-    <td><a href="{{ url_for('.detail', cid=c.id) }}"><b>{{ c.full_name }}</b></a><br><small class="muted" dir="ltr">{{ c.phone }}</small></td>
+  <form method="post" action="{{ url_for('.bulk', st=st) }}" id="bulkf"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin:8px 0">
+    <span class="hint">{{ t('cand.bulk') }}</span>
+    <select class="input sm" name="session" style="max-width:280px">{% for s in open_sessions %}<option value="{{ s.id }}">{{ s.institute.code }} · {{ s.title }} · {{ s.starts_on|d }}</option>{% else %}<option value="">{{ t('cand.no_session') }}</option>{% endfor %}</select>
+    <button class="btn btn-sm btn-cde" name="action" value="orient" {{ 'disabled' if not open_sessions }}>{{ t('cand.do_orient') }}</button>
+    <input class="input sm" name="note" placeholder="{{ t('cand.reason_ph') }}" style="max-width:240px">
+    <button class="btn btn-sm btn-line" name="action" value="reject">{{ t('cand.do_reject') }}</button>
+  </div>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th><input type="checkbox" aria-label="{{ t('obj.all') }}" onclick="document.querySelectorAll('#bulkf input[name=ids]').forEach(x=>x.checked=this.checked)"></th><th>N°</th><th>{{ t('users.name') }}</th><th>{{ t('pub.specialty') }}</th><th>{{ t('apply.profile') }}</th><th>CDE</th><th>{{ t('cand.received') }}</th><th>{{ t('cand.status_col') }}</th></tr></thead>
+  <tbody>{% for c in rows %}<tr><td>{% if c.status in ('nouvelle','retenue') %}<input type="checkbox" name="ids" value="{{ c.id }}">{% endif %}</td><td><a href="{{ url_for('.detail', cid=c.id) }}" class="mono">{{ c.short_ref }}</a></td>
+    <td><a href="{{ url_for('.detail', cid=c.id) }}"><b>{{ c.full_name }}</b></a><br><small class="muted" dir="ltr">{{ c.phone }}</small> <span class="srcv {{ c.identity_source }}">{{ t('src.' ~ c.identity_source) }}</span></td>
     <td><small>{{ c.specialty }}<br>{{ t('pstatus.' ~ c.pstatus) }}</small></td>
     <td><span class="badge b-open">{{ t('profile.' ~ c.profile) }}</span>{% if c.source != 'cdegest' %}<br><small class="muted">{{ t('src.' ~ c.source) }}</small>{% endif %}</td>
     <td><small>{{ c.institute.code }}</small></td><td>{{ c.created_at|d }}</td>
     <td><span class="badge b-{{ 'open' if c.status in ('retenue','orientee') else ('closed' if c.status=='refusee' else 'draft') }}">{{ t('cand.' ~ c.status) }}</span></td></tr>
-  {% else %}<tr><td colspan="7" class="empty">—</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<tr><td colspan="8" class="empty">—</td></tr>{% endfor %}</tbody></table></div></form>
 </div>
 {% endblock %}

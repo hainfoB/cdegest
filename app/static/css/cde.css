@@ -456,3 +456,34 @@ code.copy{display:block;margin-top:6px;background:#fff;padding:8px 10px;border-r
   .sitefoot>.wrap:first-child{grid-template-columns:1fr 1fr}.faqwrap{grid-template-columns:1fr}.faqtoc{position:static;flex-direction:row;flex-wrap:wrap}}
 @media (max-width:760px){.evdetail,.tkgrid,.site-grid.grid2,.site-grid.grid3{grid-template-columns:1fr}}
 @media (max-width:560px){.cycle,.quick,.actors{grid-template-columns:1fr}.sitefoot>.wrap:first-child{grid-template-columns:1fr}.pagehero .wrap{padding-block:30px 28px}.evgrid{grid-template-columns:1fr}}
+
+/* ---- v1.3 : rôle actif, codes, messages simulés ---- */
+.rolelist{display:grid;gap:10px}
+.rolecard{display:flex;align-items:center;gap:12px;width:100%;text-align:start;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;font:inherit;color:inherit}
+.rolecard:hover,.rolecard.on{border-color:var(--cde);background:var(--cde-50)}
+.rolecard .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--cde-700);flex:none}
+.rolecard b{display:block}.rolecard small{color:var(--mut)}
+.roleswitch{position:relative}
+.roleswitch summary{list-style:none;cursor:pointer}.roleswitch summary::-webkit-details-marker{display:none}
+.roleswitch .menu{position:absolute;inset-inline-end:0;top:calc(100% + 8px);z-index:50;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px rgba(13,27,42,.14);padding:8px;min-width:280px}
+.roleswitch .menu button,.roleswitch .menu a{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:start;background:none;border:0;border-radius:10px;padding:8px 10px;font:inherit;color:inherit;cursor:pointer;text-decoration:none}
+.roleswitch .menu button:hover,.roleswitch .menu a:hover{background:var(--cde-50)}
+.roleswitch .menu button.on{background:var(--cde-50);box-shadow:inset 3px 0 0 var(--cde)}
+.roleswitch .menu small{color:var(--mut);font-size:12px}
+.roleswitch .menu .sep{height:1px;background:var(--line);margin:6px 2px}
+.activerole{display:inline-flex;gap:6px;align-items:center;background:var(--cde-50);color:var(--cde-700);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+.simmsg{margin-top:18px;border:1.5px dashed var(--cde);border-radius:14px;padding:12px 14px;background:#FFF8F1}
+.simmsg .simhead{font-size:12.5px;font-weight:700;color:var(--cde-700);margin-bottom:6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.simmsg .simbody{white-space:pre-line;font-size:14.5px;line-height:1.6}
+.simmsg small{display:block;color:var(--mut);margin-top:6px}
+.phone{max-width:340px;border-radius:18px;background:#E9EEF3;padding:12px}
+.bubble{overflow-wrap:anywhere;background:#fff;border-radius:12px;padding:10px 12px;margin:6px 0;white-space:pre-line;font-size:14px;line-height:1.55;box-shadow:0 1px 1px rgba(0,0,0,.06)}
+.bubble.wa{background:#DCF8C6}
+.bubble small{display:block;color:var(--mut);font-size:11.5px;margin-top:4px}
+.mailbox{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff;white-space:pre-line;font-size:14px}
+.mailbox .subj{font-weight:800;margin-bottom:6px}
+.srcv{font-size:11.5px;border-radius:999px;padding:1px 8px;font-weight:700;white-space:nowrap}
+.srcv.etat_civil,.srcv.mfep,.srcv.men{background:#E6F4EA;color:#1E7A43}
+.srcv.simule{background:#FFF1E3;color:#B85400}
+.srcv.declaratif{background:#EEF1F4;color:#5E6E80}
+.alert-ok{background:#E6F4EA;color:#1E7A43}

@@ -1,0 +1,26 @@
+{% extends "auth/_layout.html" %}
+{% block title %}{{ t('act.title') }}{% endblock %}
+{% block box %}
+<h2>{{ t('act.title') }}</h2>
+{% if expired %}
+<div class="alert alert-bad">{{ t('act.expired') }}</div>
+{% else %}
+<p class="sub">{{ t('act.hello', name=u.name) }} · NIN <span dir="ltr">{{ u.nin_masked }}</span></p>
+{% if habs %}<ul class="hint">{% for h in habs %}<li>{{ t('role.' ~ h.role) }} — {{ h.scope_name(lang) }}</li>{% endfor %}</ul>{% endif %}
+{% if error %}<div class="alert alert-bad" role="alert">{{ icon('info', 18) }}<span>{{ error }}</span></div>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="phone">{{ t('pub.phone') }}</label><input class="input" id="phone" name="phone" dir="ltr" value="{{ u.phone or '' }}"></div>
+  <fieldset class="field"><legend>{{ t('act.channel') }}</legend>
+    <label class="check"><input type="radio" name="channel" value="email" checked> {{ t('ch.email') }} (<span dir="ltr">{{ u.email }}</span>)</label>
+    <label class="check"><input type="radio" name="channel" value="sms"> {{ t('ch.sms') }}</label>
+    <label class="check"><input type="radio" name="channel" value="whatsapp"> {{ t('ch.whatsapp') }} — {{ t('wa.consent') }}</label>
+  </fieldset>
+  <div class="field"><label for="password">{{ t('acc.new') }}</label><input class="input" type="password" id="password" name="password" minlength="12" autocomplete="new-password" required dir="ltr"><p class="hint">{{ t('acc.rule12') }}</p></div>
+  <div class="field"><label for="password2">{{ t('acc.new2') }}</label><input class="input" type="password" id="password2" name="password2" minlength="12" autocomplete="new-password" required dir="ltr"></div>
+  <label class="check"><input type="checkbox" name="charter" value="1" required> {{ t('charter.accept') }} <a href="#charte" onclick="document.getElementById('charte').hidden=false;return false">{{ t('charter.read') }}</a></label>
+  <div id="charte" class="hint" hidden>{{ t('charter.text') }}</div>
+  <button class="btn btn-cde btn-block" type="submit">{{ t('act.submit') }}</button>
+</form>
+{% endif %}
+{% endblock %}

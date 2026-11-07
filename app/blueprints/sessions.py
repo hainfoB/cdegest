@@ -54,7 +54,7 @@ def require_manage(s):
 
 
 def teachers_of(inst_id):
-    return (User.query.filter_by(institute_id=inst_id, role=TEACHER, active=True).order_by(User.name).all())
+    return User.having(TEACHER, institute_id=inst_id).order_by(User.name).all()
 
 
 # ------------------------------------------------------------------ list / create
@@ -256,6 +256,8 @@ def slots(sid):
         if f["action"] == "cancel" and not sl.attendances:
             sl.cancelled, sl.cancel_reason, sl.cancelled_by_id = True, (f.get("reason") or "enseignant_absent")[:20], current_user.id
             AuditLog.log("slot.cancel", target=f"slot:{sl.id}", details=sl.cancel_reason)
+            from ..services.events import planning_changed
+            planning_changed(sl.group, f"{sl.day:%d/%m} {sl.start} ✕")
             flash(t("slot.cancelled_ok"), "ok")
         elif f["action"] == "restore":
             sl.cancelled, sl.cancel_reason = False, None
@@ -335,8 +337,9 @@ def enrollments(sid):
     if act == "confirm":
         if not e.group:
             T.place_enrollment(e)
-        if e.group:
+        if e.group and e.status != "confirmed":
             e.status = "confirmed"
+            T.on_confirmed(e)
     elif act == "cancel":
         e.status = "cancelled"
     elif act == "desist":
@@ -418,6 +421,9 @@ def certificates(sid):
     enrs = [e for e in s.enrollments if e.cert_no and (one is None or e.id == one)]
     enrs.sort(key=lambda e: e.participant.last_name)
     AuditLog.log("certificates.print", target=f"session:{s.id}", details=str(len(enrs)))
+    from ..services.events import attestation_ready
+    for e in enrs:
+        attestation_ready(e)                 # M-12, une seule fois par attestation (RG-50)
     db.session.commit()
     return render_template("certificate.html", items=[(e, T.enrollment_stats(e)) for e in enrs], s=s)
 

@@ -26,6 +26,19 @@ class Config:
     FP_API_KEY = os.environ.get("FP_API_KEY", "")
     NESDA_DG_VALIDATION = os.environ.get("NESDA_DG_VALIDATION", "0") == "1"
     PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://fp.cde.dz")
+    # Identité par NIN : clé de chiffrement et clé d'empreinte (dérivées de SECRET_KEY si absentes)
+    NIN_KEY = os.environ.get("NIN_KEY", "")
+    # Codes à usage unique (ES-11) et messages (EP-11)
+    OTP_TTL_MIN = 5
+    OTP_MAX_TRIES = 5
+    OTP_MAX_SENDS_15MIN = 3
+    # Mode démonstration : les messages simulés sont affichés à l'écran (jamais en production)
+    SHOW_SIMULATED_MESSAGES = os.environ.get("SHOW_SIMULATED_MESSAGES", os.environ.get("DEMO_MODE", "1")) == "1"
+    QUIET_START, QUIET_END = 21, 8          # pas de message B, C ou D entre 21 h et 8 h (RG-47)
+    MOBILE_DAILY_CAP = 2                    # messages B ou C par personne et par jour (RG-48)
+    # Clés des partenaires pour les API de sortie (vide = API fermée)
+    NESDA_API_KEY = os.environ.get("NESDA_API_KEY", "")
+    MFEP_API_KEY = os.environ.get("MFEP_API_KEY", "")
     DEFAULT_LANG = "ar"
     LANGS = ("ar", "fr", "en")
     TIMEZONE = "Africa/Algiers"

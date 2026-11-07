@@ -1,0 +1,12 @@
+{% extends "auth/_layout.html" %}
+{% block title %}{{ t('forgot.new') }}{% endblock %}
+{% block box %}
+<h2>{{ t('forgot.new') }}</h2>
+{% if error %}<div class="alert alert-bad" role="alert">{{ error }}</div>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="field"><label for="password">{{ t('acc.new') }}</label><input class="input" type="password" id="password" name="password" minlength="10" autocomplete="new-password" required dir="ltr"><p class="hint">{{ t('acc.rule') }}</p></div>
+  <div class="field"><label for="password2">{{ t('acc.new2') }}</label><input class="input" type="password" id="password2" name="password2" minlength="10" autocomplete="new-password" required dir="ltr"></div>
+  <button class="btn btn-cde btn-block" type="submit">{{ t('save') }}</button>
+</form>
+{% endblock %}

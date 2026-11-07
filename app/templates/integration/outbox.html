@@ -1,0 +1,34 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.outbox') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('nav.outbox') }}</h1><p>{{ t('out.hint') }}</p></div>
+  <a class="btn btn-sm btn-line" href="{{ url_for('integration.templates') }}">{{ t('out.catalog') }}</a></div>
+<div class="kpis" style="margin-bottom:14px">
+  {% for s in ('delivered','scheduled','failed') %}<div class="kpi"><div class="top"><span class="lbl">{{ t('out.st.' ~ s) }}</span></div><div class="val has">{{ counts[s] }}</div></div>{% endfor %}
+  {% for c in ('email','sms','whatsapp') %}<div class="kpi"><div class="top"><span class="lbl">{{ t('ch.' ~ c) }}</span></div><div class="val has">{{ by_ch[c] }}</div></div>{% endfor %}
+</div>
+{% if can_run %}
+<form method="post" class="panel" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <span class="hint" style="flex:1;min-width:240px">{{ t('out.run_hint') }}</span>
+  <button class="btn btn-sm btn-line" name="action" value="run">{{ t('out.run') }}</button>
+  <button class="btn btn-sm btn-line" name="action" value="digest">{{ t('out.digest') }}</button></form>
+{% endif %}
+<form class="periodbar" method="get" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
+  <select class="input sm" name="code" onchange="this.form.submit()"><option value="">{{ t('out.all_codes') }}</option>{% for c, sp in CATALOG.items() %}<option value="{{ c }}" {{ 'selected' if f.code == c }}>{{ c }} · {{ sp.label[lang] if lang in sp.label else sp.label.fr }}</option>{% endfor %}</select>
+  <select class="input sm" name="cat" onchange="this.form.submit()"><option value="">{{ t('out.all_cats') }}</option>{% for c in ('A','B','C','D') %}<option value="{{ c }}" {{ 'selected' if f.cat == c }}>{{ c }} · {{ CAT[c][lang] }}</option>{% endfor %}</select>
+  <select class="input sm" name="channel" onchange="this.form.submit()"><option value="">{{ t('out.all_ch') }}</option>{% for c in ('email','sms','whatsapp') %}<option value="{{ c }}" {{ 'selected' if f.channel == c }}>{{ t('ch.' ~ c) }}</option>{% endfor %}</select>
+  <select class="input sm" name="status" onchange="this.form.submit()"><option value="">{{ t('out.all_st') }}</option>{% for s in ('delivered','scheduled','failed') %}<option value="{{ s }}" {{ 'selected' if f.status == s }}>{{ t('out.st.' ~ s) }}</option>{% endfor %}</select>
+</form>
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('audit.when') }}</th><th>{{ t('out.code') }}</th><th>{{ t('out.channel') }}</th><th>{{ t('out.to') }}</th><th>{{ t('out.message') }}</th><th>{{ t('xl.status') }}</th></tr></thead>
+<tbody>{% for m in rows %}<tr>
+  <td style="white-space:nowrap">{{ m.created_at|dz }}{% if m.status == 'scheduled' %}<br><small>→ {{ m.scheduled_for|dz }}</small>{% endif %}</td>
+  <td><b>{{ m.code }}</b> <span class="badge b-ink">{{ m.category }}</span></td>
+  <td>{{ t('ch.' ~ m.channel) }}</td>
+  <td dir="ltr" style="text-align:start"><small>{{ m.to_masked }}</small>{% if m.user %}<br><small>{{ m.user.name }}</small>{% endif %}</td>
+  <td style="max-width:460px">{% if m.code == 'M-01' and not show_codes %}<i class="hint">{{ t('out.code_hidden') }}</i>{% else %}
+    <div class="bubble {{ 'wa' if m.channel == 'whatsapp' }}" dir="{{ 'rtl' if m.lang == 'ar' else 'ltr' }}">{% if m.channel == 'email' %}<b>{{ m.subject }}</b>
+{% endif %}{{ m.body }}</div>{% endif %}</td>
+  <td><span class="badge {{ 'b-ok' if m.status == 'delivered' else 'b-wait' if m.status == 'scheduled' else 'b-bad' }}">{{ t('out.st.' ~ m.status) }}</span>{% if m.error %}<br><small>{{ t('out.err.' ~ m.error) }}</small>{% endif %}</td></tr>
+{% else %}<tr><td colspan="6" class="empty">{{ t('none') }}</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

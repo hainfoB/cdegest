@@ -8,31 +8,39 @@ from functools import wraps
 from flask import abort
 from flask_login import current_user, login_required
 
-from ..models import Institute, Module, Session, Slot, User, Wilaya, Group
+from datetime import date
+
+from ..extensions import db
+from ..models import Habilitation, Institute, Module, Session, Slot, User, Wilaya, Group
 
 ADMIN, MFEP, DFEP, COORD, RESP, TEACHER = "admin", "mfep", "dfep", "coord", "resp", "formateur"
 NESDA, NESDA_DG = "nesda", "nesda_dg"
+CANDIDAT, STAGIAIRE = "candidat", "stagiaire"
 ROLES = (ADMIN, MFEP, DFEP, COORD, RESP, TEACHER, NESDA_DG, NESDA)
+PUBLIC = {CANDIDAT, STAGIAIRE}
 
 LEVEL = {ADMIN: "platform", MFEP: "national", NESDA_DG: "national", DFEP: "wilaya", COORD: "wilaya",
-         NESDA: "wilaya", RESP: "institute", TEACHER: "institute"}
+         NESDA: "wilaya", RESP: "institute", TEACHER: "institute", CANDIDAT: "self", STAGIAIRE: "self"}
 
 NATIONAL = {ADMIN, MFEP, NESDA_DG}
 WILAYA_LEVEL = {DFEP, COORD, NESDA}
 NEEDS_WILAYA = {DFEP, COORD, NESDA}
 NEEDS_INSTITUTE = {RESP, TEACHER}
 
-# Who may create which accounts
+# Qui accorde quel rôle (CDC fonctionnel v1.3, tableau 5.1 ; validé le 07/11/2026)
 CAN_CREATE = {
     ADMIN: set(ROLES),
-    MFEP: {DFEP, COORD},
+    MFEP: {MFEP, DFEP, NESDA_DG},
     NESDA_DG: {NESDA},
-    DFEP: {COORD, RESP, TEACHER},
-    COORD: {RESP, TEACHER},
+    DFEP: {COORD, RESP},
+    COORD: {RESP},
     RESP: {TEACHER},
     TEACHER: set(),
     NESDA: set(),
+    CANDIDAT: set(),
+    STAGIAIRE: set(),
 }
+CAN_GRANT = CAN_CREATE
 
 # The MFEP sees aggregates only — never personal data (loi 18-07)
 AGGREGATE_ONLY = {MFEP}
@@ -48,6 +56,7 @@ ALL = set(ROLES)
 # Sidebar: (endpoint, icon, i18n key, roles)
 NAV = [
     ("main.dashboard", "grid", "nav.dashboard", ALL),
+    ("espace.home", "user", "nav.espace", PUBLIC),
     ("main.compare", "columns", "nav.compare", {ADMIN, MFEP}),
     ("sessions.my_slots", "qr", "nav.myslots", {TEACHER}),
     ("candidatures.index", "user-check", "nav.candidatures", {ADMIN, DFEP, COORD, RESP}),
@@ -65,10 +74,14 @@ NAV = [
     ("site.manage_events", "calendar", "nav.events", {ADMIN, MFEP, DFEP, COORD, RESP}),
     ("site.manage_tickets", "message", "nav.tickets", {ADMIN, DFEP, COORD, RESP, NESDA, NESDA_DG}),
     ("main.integration", "globe", "nav.integration", {ADMIN, MFEP}),
+    ("integration.connectors", "repeat", "nav.connectors", {ADMIN, MFEP}),
+    ("integration.outbox", "message", "nav.outbox", {ADMIN, MFEP, DFEP, COORD, RESP}),
 ]
 
 
 def nav_for(user):
+    if user.role in PUBLIC:
+        return [n for n in NAV if n[0] == "espace.home"]
     return [n for n in NAV if user.role in n[3]]
 
 
@@ -115,23 +128,40 @@ def visible_institute_ids(user):
     return [i.id for i in visible_institutes(user, include_inactive=True)]
 
 
-def visible_users(user):
-    q = User.query
-    if user.role == ADMIN:
+def visible_habilitations(user):
+    """Habilitations d'agents que le rôle actif peut voir (les candidats et stagiaires n'y figurent pas)."""
+    q = Habilitation.query.filter(Habilitation.role.in_(ROLES))
+    r = user.role
+    if r == ADMIN:
         return q
-    if user.role == MFEP:
-        return q.filter(User.role.in_((MFEP, DFEP, COORD)))
-    if user.role == NESDA_DG:
-        return q.filter(User.role.in_((NESDA_DG, NESDA)))
-    if user.role in (DFEP, COORD):
+    if r == MFEP:
+        return q.filter(Habilitation.role.in_((MFEP, DFEP, COORD, NESDA_DG)))
+    if r == NESDA_DG:
+        return q.filter(Habilitation.role.in_((NESDA_DG, NESDA)))
+    if r in (DFEP, COORD):
         inst_ids = visible_institute_ids(user)
         return q.filter(
-            ((User.wilaya_id == user.wilaya_id) & User.role.in_((DFEP, COORD, RESP, TEACHER, NESDA)))
-            | (User.institute_id.in_(inst_ids or [-1]))
+            ((Habilitation.wilaya_id == (user.wilaya_id or -1)) & Habilitation.role.in_((DFEP, COORD, RESP, TEACHER, NESDA)))
+            | (Habilitation.institute_id.in_(inst_ids or [-1]))
         )
-    if user.role == RESP:
-        return q.filter(User.institute_id == user.institute_id)
-    return q.filter(User.id == user.id)
+    if r == RESP:
+        return q.filter(Habilitation.institute_id == (user.institute_id or -1))
+    return q.filter(Habilitation.user_id == user.id)
+
+
+def visible_users(user):
+    """Personnes ayant au moins une habilitation visible."""
+    ids = visible_habilitations(user).with_entities(Habilitation.user_id)
+    q = User.query.filter(User.id.in_(ids))
+    if user.role in (TEACHER, NESDA) or user.role in PUBLIC:
+        q = User.query.filter(User.id == user.id)
+    return q
+
+
+def roles_on_institute(user, institute_id):
+    """Rôles valides d'une personne sur un CDE (séparation des fonctions, RG-36)."""
+    today = date.today()
+    return {h.role for h in user.habilitations if h.is_valid(today) and h.institute_id == institute_id}
 
 
 def visible_sessions(user):
@@ -157,6 +187,8 @@ def can_manage_session(user, s):
 
 
 def scope_label(user, lang):
+    if user.role in PUBLIC:
+        return {"ar": "فضائي الشخصي", "fr": "Mon espace", "en": "My space"}[lang]
     if user.role in NATIONAL:
         return {"ar": "المستوى الوطني", "fr": "Niveau national", "en": "National level"}[lang]
     if user.institute is not None:

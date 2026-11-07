@@ -24,6 +24,7 @@
 <td>{% if elig[e.id] %}<span class="badge b-ok">{{ t('yes') }}</span>{% elif e.dropout %}<span class="badge b-bad">{{ t('drop.' ~ e.dropout_reason) }}</span>{% else %}<span class="badge b-draft">{{ t('no') }}</span>{% endif %}</td>
 {% if can_print %}<td class="code">{{ e.cert_no or '—' }}</td><td class="actions">{% if e.cert_no %}<a class="btn btn-sm btn-line" target="_blank" href="{{ url_for('sessions.certificates', sid=s.id, e=e.id) }}">{{ t('cert.print') }}</a>{% endif %}</td>{% endif %}</tr>{% endfor %}</tbody></table></div>
 {% if s.nesda_note %}<div class="flash flash-err" style="margin-top:16px">{{ icon('info', 18) }}<span>{{ s.nesda_note }}</span></div>{% endif %}
+{% if conflict %}<div class="flash flash-err">{{ t('nesda.conflict') }}</div>{% endif %}
 {% if can_act %}
 <div class="grid2" style="margin-top:18px">
   <form method="post" class="panel" data-confirm="{{ t('nesda.confirm_validate', n=n_elig) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

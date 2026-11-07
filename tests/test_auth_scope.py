@@ -2,7 +2,7 @@ import pytest
 
 from app.models import User
 from app.security import visible_institutes, visible_users, visible_wilayas
-from tests.conftest import login
+from tests.conftest import login, nin_of
 
 ACCOUNTS = ["mfep@cdegest.dz", "dfep.bba@cdegest.dz", "coord.bba@cdegest.dz",
             "resp.insfp-bba01@cdegest.dz", "formateur.bba01@cdegest.dz"]
@@ -42,13 +42,16 @@ def test_each_demo_account_reaches_its_dashboard(client, email):
 
 
 def test_open_redirect_blocked(client):
-    r = client.post("/login?next=https://evil.example", data={"email": "mfep@cdegest.dz", "password": "Cde@2026"})
+    from tests.conftest import last_code
+    u = User.by_nin(nin_of("mfep@cdegest.dz"))
+    client.post("/login?next=https://evil.example", data={"nin": u.nin, "password": "Cde@2026"})
+    r = client.post("/login/code", data={"code": last_code(u.id)})
     assert r.headers["Location"].endswith("/tableau-de-bord")
 
 
 def test_inactive_account_refused(app, client):
     from app.extensions import db
-    u = User.query.filter_by(email="coord.bba@cdegest.dz").first()
+    u = User.by_nin(nin_of("coord.bba@cdegest.dz"))
     u.active = False
     db.session.commit()
     assert login(client, "coord.bba@cdegest.dz").status_code == 200
@@ -57,14 +60,14 @@ def test_inactive_account_refused(app, client):
 # ---------- perimeters (the critical part) ----------
 
 def _u(email):
-    return User.query.filter_by(email=email).first()
+    return User.by_nin(nin_of(email))
 
 
 def test_mfep_sees_all_wilayas_but_no_institute_staff(app):
     u = _u("mfep@cdegest.dz")
     assert visible_wilayas(u).count() == 69
     roles = {x.role for x in visible_users(u)}
-    assert roles <= {"mfep", "dfep", "coord"}, "MFEP must not list institute staff"
+    assert roles <= {"mfep", "dfep", "coord", "nesda_dg"}, "MFEP must not list institute staff"
     from app.security import visible_sessions
     assert visible_sessions(u).count() == 0, "MFEP sees aggregates only"
 
@@ -114,7 +117,7 @@ ALL = ACCOUNTS + ["nesda.bba@cdegest.dz", "dg.nesda@cdegest.dz"]
 def test_every_menu_entry_opens(client, email):
     from app.security import nav_for
     login(client, email)
-    u = User.query.filter_by(email=email).first()
+    u = User.by_nin(nin_of(email))
     from flask import url_for
     with client.application.test_request_context():
         urls = [url_for(n[0]) for n in nav_for(u)]
@@ -154,8 +157,8 @@ def test_password_from_environment(monkeypatch):
     with app.app_context():
         db.create_all()
         seed_base(demo=True)
-        mfep = User.query.filter_by(email="mfep@cdegest.dz").first()
-        coord = User.query.filter_by(email="coord.bba@cdegest.dz").first()
+        mfep = User.by_nin(nin_of("mfep@cdegest.dz"))
+        coord = User.by_nin(nin_of("coord.bba@cdegest.dz"))
         assert mfep.check_password("Xy7-very-private")
         assert not coord.check_password("Cde@2026"), "no shared default password outside tests"
         db.drop_all()

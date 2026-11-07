@@ -1,0 +1,32 @@
+{% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
+{% block title %}{{ t('nav.espace') }}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ t('esp.hello', name=current_user.name) }}</h1><p>NIN <span dir="ltr">{{ current_user.nin_masked }}</span> · <span class="srcv {{ current_user.identity_source }}">{{ t('src.' ~ current_user.identity_source) }}</span></p></div>
+  {% if not in_progress %}<a class="btn btn-cde btn-sm" href="{{ url_for('public.apply') }}">+ {{ t('esp.new') }}</a>{% endif %}</div>
+
+<section class="panel" style="margin-bottom:18px"><h2>{{ t('esp.demands') }}</h2>
+{% if cands %}<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('esp.ref') }}</th><th>{{ t('esp.cde') }}</th><th>{{ t('esp.date') }}</th><th>{{ t('xl.status') }}</th><th>{{ t('esp.detail') }}</th></tr></thead>
+<tbody>{% for c in cands %}<tr><td class="mono"><b>{{ c.short_ref }}</b></td><td>{{ c.institute.name(lang) if c.institute else '—' }}</td><td>{{ c.created_at|dz }}</td>
+<td><span class="badge {{ {'nouvelle':'b-wait','retenue':'b-wait','orientee':'b-ok','refusee':'b-bad'}[c.status] }}">{{ t('cand.' ~ c.status) }}</span></td>
+<td>{% if c.status == 'refusee' and c.note %}<small>{{ t('esp.reason') }} : {{ c.note }}</small>{% elif c.status == 'orientee' and c.enrollment %}<a href="{{ url_for('public.ticket', token=c.enrollment.token) }}">{{ c.enrollment.session.title }}</a>{% else %}<small>{{ t('esp.wait') }}</small>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}<p class="empty">{{ t('esp.no_demand') }}</p>{% endif %}
+</section>
+
+<section class="panel" style="margin-bottom:18px"><h2>{{ t('esp.trainings') }}</h2>
+{% if enrs %}<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('xl.session') }}</th><th>{{ t('esp.dates') }}</th><th>{{ t('xl.status') }}</th><th>{{ t('kpi.attendance') }}</th><th>{{ t('esp.attestation') }}</th></tr></thead>
+<tbody>{% for e in enrs %}<tr><td><a href="{{ url_for('public.ticket', token=e.token) }}"><b>{{ e.session.title }}</b></a><br><small>{{ e.session.institute.name(lang) }}</small></td>
+<td>{{ e.session.starts_on|d }} → {{ e.session.ends_on|d }}</td><td>{{ t('enr.st.' ~ e.status) }}</td>
+<td>{{ stats[e.id].rate ~ ' %' if stats[e.id].rate is not none else '—' }}</td>
+<td>{% if e.cert_no and e.session.certificates_open %}<a href="{{ url_for('public.verify', cert_no=e.cert_no) }}" class="mono">{{ e.cert_no }}</a>{% else %}—{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+{% else %}<p class="empty">{{ t('esp.no_training') }}</p>{% endif %}
+</section>
+
+<section class="panel"><h2>{{ t('esp.messages') }}</h2>
+<p class="hint">{{ t('esp.messages_hint') }} <a href="{{ url_for('org.account') }}">{{ t('esp.prefs') }}</a></p>
+<div class="phone" style="max-width:520px">{% for m in msgs %}
+  <div class="bubble {{ 'wa' if m.channel == 'whatsapp' }}" dir="{{ 'rtl' if m.lang == 'ar' else 'ltr' }}">{% if m.channel == 'email' %}<b>{{ m.subject }}</b>
+{% endif %}{{ m.body }}<small dir="ltr">{{ t('ch.' ~ m.channel) }} · {{ m.created_at|dz }}{% if m.status == 'scheduled' %} · {{ t('out.st.scheduled') }}{% endif %}</small></div>
+{% else %}<p class="empty">{{ t('none') }}</p>{% endfor %}</div>
+</section>
+{% endblock %}

@@ -92,6 +92,8 @@ def nesda_submit(session, user):
     session.nesda_submitted_at = utcnow()
     session.nesda_note = None
     AuditLog.log("nesda.submit", target=f"session:{session.id}", user=user)
+    from .events import session_submitted
+    session_submitted(session)
     return True
 
 
@@ -114,12 +116,20 @@ def nesda_validate(session, user, today=None):
     return True
 
 
+def separation_conflict(session, user):
+    """RG-36 : le valideur NESDA ne doit détenir aucune autre habilitation sur le CDE de la session."""
+    from ..security import roles_on_institute
+    return bool(roles_on_institute(user, session.institute_id))
+
+
 def nesda_reject(session, user, note):
     if session.nesda_status not in ("submitted", "wilaya_ok"):
         return False
     session.nesda_status = "rejected"
     session.nesda_note = (note or "").strip()[:1000]
     AuditLog.log("nesda.reject", target=f"session:{session.id}", details=session.nesda_note, user=user)
+    from .events import session_rejected
+    session_rejected(session)
     return True
 
 
@@ -159,5 +169,14 @@ def place_enrollment(enr):
         if taken < (s.seats_per_group or 0):
             enr.group = g
             enr.status = "confirmed" if s.auto_confirm else "pending"
+            if enr.status == "confirmed":
+                on_confirmed(enr)
             return
     enr.status = "waitlist"
+
+
+def on_confirmed(enr):
+    """Inscription validée : convocation (M-08) et habilitation « stagiaire »."""
+    from .events import enrollment_confirmed
+    db.session.flush()
+    enrollment_confirmed(enr)

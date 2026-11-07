@@ -8,11 +8,13 @@ from flask_login import current_user, login_required
 
 from ..extensions import db
 from ..i18n import get_lang, t
-from ..models import (AuditLog, Group, Institute, Objective, Programme, ProgrammeLine, Session, SurveyQuestion,
+from .. import nin as NIN
+from ..models import (AuditLog, Group, Habilitation, Institute, Objective, Programme, ProgrammeLine, Session, SurveyQuestion,
                       SurveyResponse, User, Wilaya, WorkshopTemplate)
+from ..utils import utcnow
 from ..security import (ADMIN, CAN_CREATE, COORD, DFEP, MFEP, NEEDS_INSTITUTE, NEEDS_WILAYA, NESDA, NESDA_DG,
-                        RESP, ROLES, TEACHER, roles_required, sees_people, visible_institutes, visible_sessions,
-                        visible_users, visible_wilayas)
+                        RESP, ROLES, TEACHER, roles_required, sees_people, visible_habilitations, visible_institutes,
+                        visible_sessions, visible_users, visible_wilayas)
 from ..services import kpi as K
 from ..services.period import Period, recent_years, semester_bounds
 
@@ -51,20 +53,54 @@ def gen_password():
 @bp.route("/compte", methods=["GET", "POST"])
 @login_required
 def account():
+    """Mon compte : mot de passe, canaux de contact, préférences de messages, mes rôles (US-107, US-109, US-1105)."""
+    me = current_user
     if request.method == "POST":
-        old, new, new2 = (request.form.get(k) or "" for k in ("old", "new", "new2"))
-        if not current_user.check_password(old):
-            flash(t("acc.bad_old"), "err")
-        elif len(new) < 10 or new != new2:
-            flash(t("acc.bad_new"), "err")
-        else:
-            current_user.set_password(new)
-            current_user.must_change_password = False
-            AuditLog.log("password.change", target=f"user:{current_user.id}")
+        sect = request.form.get("section", "password")
+        if sect == "password":
+            old, new, new2 = (request.form.get(k) or "" for k in ("old", "new", "new2"))
+            minlen = 12 if me.agent_habilitations() else 10
+            if not me.check_password(old):
+                flash(t("acc.bad_old"), "err")
+            elif len(new) < minlen or new != new2:
+                flash(t("acc.bad_new"), "err")
+            else:
+                me.set_password(new)
+                me.must_change_password = False
+                AuditLog.log("password.change", target=f"user:{me.id}")
+                from ..services.events import security_alert
+                security_alert(me, "password")
+                db.session.commit()
+                flash(t("acc.changed"), "ok")
+                return redirect(url_for("main.dashboard") if me.is_agent else url_for("espace.home"))
+        elif sect == "contact":
+            f = request.form
+            email = (f.get("email") or "").strip().lower()[:150]
+            phone = "".join(c for c in (f.get("phone") or "") if c.isdigit() or c == "+")[:20]
+            wa = "".join(c for c in (f.get("whatsapp") or "") if c.isdigit() or c == "+")[:20]
+            changed = (email != (me.email or "")) or (phone != (me.phone or "")) or (wa != (me.whatsapp or ""))
+            if changed:
+                from ..services.events import security_alert
+                security_alert(me, "channel")             # alerte envoyée à l'ancien canal
+                if email != (me.email or ""):
+                    me.email_verified_at = None
+                if phone != (me.phone or "") or wa != (me.whatsapp or ""):
+                    me.phone_verified_at = None
+            me.email, me.phone, me.whatsapp = email or me.email, phone or None, wa or None
+            mob = f.get("mobile")
+            if mob == "whatsapp" and f.get("wa_consent"):
+                me.mobile_channel, me.wa_consent_at = "whatsapp", me.wa_consent_at or utcnow()
+            else:
+                me.mobile_channel = "sms"
+                if mob != "whatsapp":
+                    me.wa_consent_at = None if f.get("wa_withdraw") else me.wa_consent_at
+            me.code_channel = f.get("code") if f.get("code") in ("email", "sms", "whatsapp") else "email"
+            me.reminders = bool(f.get("reminders"))
+            AuditLog.log("account.contact", target=f"user:{me.id}")
             db.session.commit()
-            flash(t("acc.changed"), "ok")
-            return redirect(url_for("main.dashboard"))
-    return render_template("org/account.html")
+            flash(t("saved"), "ok")
+            return redirect(url_for("org.account"))
+    return render_template("org/account.html", habs=sorted(me.habilitations, key=lambda h: (h.status != "active", h.id)))
 
 
 # ------------------------------------------------------------------ institutes
@@ -104,18 +140,23 @@ def institutes():
     for s in Session.query.filter(Session.institute_id.in_([i.id for i in insts] or [-1])):
         counts[s.institute_id] += 1
     staff = defaultdict(int)
-    for u in User.query.filter(User.institute_id.in_([i.id for i in insts] or [-1]), User.active.is_(True)):
-        staff[u.institute_id] += 1
+    for h in Habilitation.query.filter(Habilitation.institute_id.in_([i.id for i in insts] or [-1]),
+                                       Habilitation.status == "active", Habilitation.role.in_((RESP, TEACHER))):
+        staff[h.institute_id] += 1
     edit = db.session.get(Institute, _int(request.args.get("edit"), -1))
     return render_template("org/institutes.html", insts=insts, counts=counts, staff=staff, can_edit=can_edit,
                            edit=edit if edit in insts else None, wilayas=visible_wilayas(current_user).all())
 
 
-# ------------------------------------------------------------------ accounts
+# ------------------------------------------------------------------ habilitations (CU-02)
 
-def _can_manage(me, u):
-    return (u.id != me.id and u.role in CAN_CREATE.get(me.role, set())
-            and visible_users(me).filter(User.id == u.id).count() == 1)
+def _can_manage_hab(me, h):
+    """L'autorité qui accorde ce rôle, dans son périmètre (ou la DFEP de la wilaya), jamais sur soi-même."""
+    if h.user_id == me.id:
+        return False
+    if h.role not in CAN_CREATE.get(me.role, set()) and not (me.role == DFEP and h.role in (COORD, RESP, TEACHER)):
+        return False
+    return visible_habilitations(me).filter(Habilitation.id == h.id).count() == 1
 
 
 @bp.route("/comptes", methods=["GET", "POST"])
@@ -123,60 +164,114 @@ def _can_manage(me, u):
 def users():
     me = current_user
     creatable = [r for r in ROLES if r in CAN_CREATE.get(me.role, set())]
+    lang = get_lang()
     if request.method == "POST":
         f = request.form
-        action = f.get("action", "create")
-        if action == "create":
+        action = f.get("action", "grant")
+        if action == "lookup":
+            from ..services import connectors as C
+            st, data, src = C.identity(f.get("nin"))
+            db.session.commit()
+            existing = User.by_nin(f.get("nin"))
+            return render_template("org/users.html", **_users_ctx(me, creatable), lookup={
+                "nin": NIN.normalize(f.get("nin")), "status": st, "data": data, "source": src, "existing": existing})
+        if action == "grant":
             role = f.get("role")
-            email = (f.get("email") or "").strip().lower()
-            if role not in creatable or not email or not f.get("name"):
-                flash(t("form.missing"), "err")
+            raw = NIN.normalize(f.get("nin"))
+            reason = (f.get("reason") or "").strip()[:200]
+            if role not in creatable or not NIN.valid(raw) or not reason:
+                flash(t("hab.missing"), "err")
                 return redirect(url_for("org.users"))
-            if User.query.filter_by(email=email).first():
-                flash(t("users.email_taken"), "err")
-                return redirect(url_for("org.users"))
-            u = User(name=f["name"].strip()[:120], email=email, phone=(f.get("phone") or "")[:30], role=role,
-                     lang=f.get("lang") if f.get("lang") in ("ar", "fr", "en") else "ar")
+            inst = wil = None
             if role in NEEDS_INSTITUTE:
                 inst = db.session.get(Institute, _int(f.get("institute"), -1))
                 if inst not in visible_institutes(me).all():
                     flash(t("form.missing"), "err")
                     return redirect(url_for("org.users"))
-                u.institute, u.wilaya = inst, inst.wilaya
             elif role in NEEDS_WILAYA:
-                w = me.wilaya if me.role in (DFEP, COORD) else Wilaya.query.filter_by(code=f.get("wilaya")).first()
-                if w is None or w not in visible_wilayas(me).all():
+                wil = me.wilaya if me.role in (DFEP, COORD) else Wilaya.query.filter_by(code=f.get("wilaya")).first()
+                if wil is None or wil not in visible_wilayas(me).all():
                     flash(t("form.missing"), "err")
                     return redirect(url_for("org.users"))
-                u.wilaya = w
-            pwd = gen_password()
-            u.set_password(pwd)
-            u.must_change_password = True
-            db.session.add(u)
-            AuditLog.log("user.create", target=email, details=role)
+            ends = _date(f.get("ends_on"))
+            u = User.by_nin(raw)
+            created = u is None
+            if created:
+                from ..services import connectors as C
+                st, data, src = C.identity(raw)
+                email = (f.get("email") or "").strip().lower()[:150]
+                if not email:
+                    flash(t("hab.need_email"), "err")
+                    return redirect(url_for("org.users"))
+                u = User(name=(f.get("name") or "").strip()[:120] or "—", email=email,
+                         phone=(f.get("phone") or "")[:30] or None, lang=f.get("lang") if f.get("lang") in ("ar", "fr", "en") else "ar",
+                         active=True)
+                u.nin = raw
+                C.apply_identity(u, st, data, src)
+                if (f.get("name") or "").strip():
+                    u.name = f["name"].strip()[:120]
+                u.set_password(gen_password() + gen_password())     # inconnu : la personne le choisit à l'activation
+                db.session.add(u)
+                db.session.flush()
+                u.new_invite()
+            if any(h.is_valid() and h.role == role and h.institute_id == (inst.id if inst else None)
+                   and h.wilaya_id == ((inst.wilaya_id if inst else None) or (wil.id if wil else None)) for h in u.habilitations):
+                flash(t("hab.exists"), "err")
+                return redirect(url_for("org.users"))
+            h = u.grant(role, institute=inst, wilaya=wil, by=me, reason=reason, ends_on=ends,
+                        activated=not created)
+            db.session.flush()
+            AuditLog.log("habilitation.grant", target=f"user:{u.id}", details=f"{role}:{inst.code if inst else (wil.code if wil else 'national')}")
+            from ..services.events import habilitation_changed
+            habilitation_changed(h, "invited" if created else "granted", me)
             db.session.commit()
-            flash(t("users.created", email=escape(email), pwd=pwd), "pwd")
+            flash(t("hab.invited") if created else t("hab.granted"), "ok")
+            return redirect(url_for("org.users"))
+        h = db.session.get(Habilitation, _int(f.get("id"), -1))
+        if not h or not _can_manage_hab(me, h):
+            abort(403)
+        why = (f.get("why") or "").strip()[:200]
+        if action in ("suspend", "revoke", "restore") and not why:
+            flash(t("hab.need_reason"), "err")
+            return redirect(url_for("org.users"))
+        if action == "suspend" and h.status == "active":
+            h.status = "suspended"
+        elif action == "restore" and h.status == "suspended":
+            h.status = "active"
+        elif action == "revoke" and h.status in ("active", "suspended", "pending"):
+            h.status = "revoked"
+        elif action == "reset":
+            u = h.user
+            u.new_invite()
+            AuditLog.log("user.reinvite", target=f"user:{u.id}")
+            from ..services.events import habilitation_changed
+            habilitation_changed(h, "invited", me)
+            db.session.commit()
+            flash(t("hab.reinvited"), "ok")
+            return redirect(url_for("org.users"))
         else:
-            u = db.session.get(User, _int(f.get("id"), -1))
-            if not u or not _can_manage(me, u):
-                abort(403)
-            if action == "toggle":
-                u.active = not u.active
-                AuditLog.log("user.toggle", target=u.email, details=str(u.active))
-                flash(t("saved"), "ok")
-            elif action == "reset":
-                pwd = gen_password()
-                u.set_password(pwd)
-                u.must_change_password = True
-                AuditLog.log("user.reset", target=u.email)
-                flash(t("users.reset_done", email=escape(u.email), pwd=pwd), "pwd")
-            db.session.commit()
+            abort(400)
+        h.changed_by_id, h.changed_at, h.change_reason = me.id, utcnow(), why
+        AuditLog.log(f"habilitation.{action}", target=f"user:{h.user_id}", details=f"{h.role}:{why}")
+        from ..services.events import habilitation_changed
+        habilitation_changed(h, {"suspend": "suspended", "revoke": "revoked", "restore": "restored"}[action], me)
+        db.session.commit()
+        flash(t("saved"), "ok")
         return redirect(url_for("org.users"))
-    rows = visible_users(me).order_by(User.role, User.name).all()
-    return render_template("org/users.html", rows=rows, creatable=creatable,
-                           institutes=visible_institutes(me).all(), wilayas=visible_wilayas(me).all(),
-                           can_manage=lambda u: _can_manage(me, u), NEEDS_INSTITUTE=NEEDS_INSTITUTE,
-                           NEEDS_WILAYA=NEEDS_WILAYA)
+    return render_template("org/users.html", **_users_ctx(me, creatable), lookup=None)
+
+
+def _users_ctx(me, creatable):
+    st = request.args.get("st", "active")
+    q = visible_habilitations(me)
+    if st in ("active", "pending", "suspended", "revoked"):
+        q = q.filter(Habilitation.status == st)
+    rows = q.join(User, Habilitation.user_id == User.id).order_by(Habilitation.role, User.name).all()
+    counts = {k: visible_habilitations(me).filter(Habilitation.status == k).count()
+              for k in ("active", "pending", "suspended", "revoked")}
+    return dict(rows=rows, creatable=creatable, institutes=visible_institutes(me).all(), wilayas=visible_wilayas(me).all(),
+                can_manage=lambda h: _can_manage_hab(me, h), NEEDS_INSTITUTE=NEEDS_INSTITUTE, NEEDS_WILAYA=NEEDS_WILAYA,
+                st=st, counts=counts)
 
 
 # ------------------------------------------------------------------ référentiel
@@ -428,9 +523,9 @@ def audit():
     me = current_user
     q = AuditLog.query
     if me.role == MFEP:
-        q = q.join(User, AuditLog.user_id == User.id).filter(User.role == MFEP)
+        q = q.filter(AuditLog.role == MFEP)
     elif me.role == NESDA_DG:
-        q = q.join(User, AuditLog.user_id == User.id).filter(User.role.in_((NESDA_DG, NESDA)))
+        q = q.filter(AuditLog.role.in_((NESDA_DG, NESDA)))
     elif me.role in (DFEP, COORD):
         q = q.filter(AuditLog.wilaya_id == me.wilaya_id)
     elif me.role == RESP:

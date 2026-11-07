@@ -5,7 +5,7 @@ import pytest
 
 from app.extensions import db
 from app.models import Enrollment, Institute, Session, Slot, SurveyQuestion, User, WorkshopTemplate
-from tests.conftest import login
+from tests.conftest import login, make_user, nin_of, pub_register
 
 RESP, TEACH, NESDA_W, DG = ("resp.insfp-bba01@cdegest.dz", "formateur.bba01@cdegest.dz",
                             "nesda.bba@cdegest.dz", "dg.nesda@cdegest.dz")
@@ -28,11 +28,8 @@ def _session_with_today_slot(client, tpl):
                                                 "auto_confirm": "1", "mode": "hybrid"})
     assert r.status_code == 302
     s = Session.query.filter_by(title="Atelier test").first()
-    teacher = User.query.filter_by(email=TEACH).first()
-    other = User(email="ens2@x.dz", name="Ens 2", role="formateur", institute_id=s.institute_id)
-    other.set_password("x" * 12)
-    db.session.add(other)
-    db.session.commit()
+    teacher = User.by_nin(nin_of(TEACH))
+    other = make_user("Ens 2", "formateur", institute=s.institute)
     client.post(f"/sessions/{s.id}/modules", data={"title": "M1", "hours": 3, "supervisor": teacher.id})
     # rule: a teacher without a supervised module cannot be given a slot
     client.post(f"/sessions/{s.id}/creneaux", data={"module": s.modules[0].id, "teacher": other.id, "day": today.isoformat(),
@@ -52,10 +49,7 @@ def test_full_flow(app, client, tpl):
     pub = app.test_client()
     tokens = []
     for k in range(4):
-        r = pub.post(f"/formations/{s.slug}", data={"last_name": f"Nom{k}", "first_name": "P", "phone": f"055500000{k}",
-                                                   "consent": "1", "wilaya": "34"})
-        assert r.status_code == 302
-        tokens.append(r.headers["Location"].rsplit("/", 1)[-1])
+        tokens.append(pub_register(app.test_client(), s.slug, k + 1).token)
     enrs = Enrollment.query.filter_by(session_id=s.id).order_by(Enrollment.id).all()
     assert [e.status for e in enrs] == ["confirmed", "confirmed", "confirmed", "waitlist"], "3 seats then waiting list"
     assert pub.get(f"/t/{tokens[0]}").status_code == 200
@@ -119,8 +113,7 @@ def test_teacher_cannot_call_another_day(app, client, tpl):
     # the CDE manager can still correct, and it is flagged
     client.post("/logout")
     pub = app.test_client()
-    pub.post(f"/formations/{s.slug}", data={"last_name": "X", "first_name": "Y", "phone": "0666000000", "consent": "1"})
-    e = Enrollment.query.first()
+    e = pub_register(pub, s.slug, 50)
     login(client, RESP)
     client.post(f"/appel/{slot.id}", data={f"st_{e.id}": "present"})
     assert e.attendances[0].corrected
@@ -130,12 +123,9 @@ def test_nesda_other_wilaya_forbidden(app, client, tpl):
     s = _session_with_today_slot(client, tpl)
     s.status, s.nesda_status = "closed", "submitted"
     db.session.commit()
-    other = User(email="nesda.x@x.dz", name="N", role="nesda", wilaya_id=Institute.query.filter_by(code="INSFP-STF-01").first().wilaya_id)
-    other.set_password("x" * 12)
-    db.session.add(other)
-    db.session.commit()
+    other = make_user("N", "nesda", wilaya=Institute.query.filter_by(code="INSFP-STF-01").first().wilaya)
     client.post("/logout")
-    client.post("/login", data={"email": "nesda.x@x.dz", "password": "x" * 12})
+    login(client, other.nin, password="x" * 12)
     assert client.post(f"/nesda/sessions/{s.id}", data={"action": "validate"}).status_code == 403
 
 
@@ -232,22 +222,39 @@ def test_candidature_four_steps_then_orientation(app, client, tpl):
     assert pub.get("/inscription/3").status_code == 302, "cannot skip step 1"
     yes = {"discover": "0", "skills": "1", "create_soon": "1", "project_ready": "0", "business": "1", "initiative": "1"}
     assert pub.post("/inscription/1", data=yes).headers["Location"].endswith("/inscription/2")
-    pub.post("/inscription/2", data={"last_name": "Saidi", "first_name": "Lina", "phone": "0550 12 34 56", "wilaya": "34"})
+    from tests.conftest import sim_birth
+    from flask import g
+    g.pop("_login_user", None)
+    nin = "177700000000000777"
+    r2 = pub.post("/inscription/2", data={"nin": nin, "birth_date": sim_birth(nin), "phone": "0550 12 34 56", "email": "lina@test.dz",
+                                          "wilaya": "34", "mobile": "whatsapp", "wa_consent": "1"})
+    assert r2.headers["Location"].endswith("/inscription/3"), r2.get_data(as_text=True)[:300]
     pub.post("/inscription/3", data={"pstatus": "diplome", "specialty": "Informatique", "idea": "Agence web",
                                      "sector": "numerique"})
     page = pub.get("/inscription/4").get_data(as_text=True)
     assert "إنشاء قريب" in page
-    r = pub.post("/inscription/4", data={"institute": s.institute_id, "consent": "1"})
-    assert r.status_code == 302 and "/candidature/" in r.headers["Location"]
+    r = pub.post("/inscription/4", data={"institute": s.institute_id, "consent": "1", "password": "Mot-de-passe-1",
+                                         "password2": "Mot-de-passe-1"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/login/code"), "account created, channel to confirm"
     c = Candidature.query.one()
     assert c.profile == "creation" and c.phone == "0550123456" and c.status == "nouvelle"
+    assert c.user is not None and c.user.has_role("candidat") and c.nin == nin and c.identity_source == "simule"
+    from app.models import Notification
+    assert {n.channel for n in Notification.query.filter_by(code="M-04")} == {"email", "whatsapp"}, "RG-39"
+    assert "CDE34-" in Notification.query.filter_by(code="M-04").first().body and nin not in Notification.query.filter_by(code="M-04").first().body
+    # the same NIN cannot file a second application while one is in progress (RG-07)
+    pub2 = app.test_client()
+    pub2.post("/inscription/1", data=yes)
+    g.pop("_login_user", None)
+    r3 = pub2.post("/inscription/2", data={"nin": nin, "birth_date": sim_birth(nin), "phone": "0550123456", "email": "x@test.dz", "wilaya": "34"})
+    assert r3.status_code == 200 and "CDE34-" in r3.get_data(as_text=True)
     # back office: the CDE of the institute sees it, a teacher does not
     client.post("/logout")
     login(client, TEACH)
     assert client.get("/candidatures/").status_code == 403
     client.post("/logout")
     login(client, RESP)
-    assert "Saidi" in client.get("/candidatures/").get_data(as_text=True)
+    assert c.last_name in client.get("/candidatures/").get_data(as_text=True)
     assert client.post(f"/candidatures/{c.id}", data={"action": "reject"}).status_code == 302
     db.session.refresh(c)
     assert c.status == "nouvelle", "a rejection needs a reason"
@@ -255,6 +262,9 @@ def test_candidature_four_steps_then_orientation(app, client, tpl):
     db.session.refresh(c)
     assert c.status == "orientee" and c.enrollment.session_id == s.id and c.enrollment.status == "confirmed"
     assert "Informatique" == c.enrollment.participant.specialty
+    assert c.enrollment.participant.nin == nin and c.enrollment.participant.user_id == c.user_id
+    assert c.user.has_role("stagiaire"), "validated enrollment grants the trainee role"
+    assert {n.code for n in Notification.query.filter_by(user_id=c.user_id)} >= {"M-04", "M-06", "M-08"}
     assert pub.get(f"/candidature/{c.ref}").status_code == 200
 
 
@@ -312,7 +322,7 @@ def test_objectives_excel_roundtrip(app, client):
     login(client, "mfep@cdegest.dz")
     r = client.get("/objectifs/national.xlsx?y=2026-2027")
     rows = list(load_workbook(io.BytesIO(r.data)).active.iter_rows(values_only=True))
-    assert len(rows) == 1 + 69 * 15
+    assert len(rows) == 1 + 69 * 18
     new = [rows[0]] + [list(x[:4]) + [10, 12, 22] for x in rows[1:] if x[2] == "groups"]
     client.post("/objectifs/import", data={"y": "2026-2027", "file": (_xlsx(new), "o.xlsx")},
                 content_type="multipart/form-data")

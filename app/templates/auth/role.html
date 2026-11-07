@@ -1,0 +1,17 @@
+{% extends "auth/_layout.html" %}
+{% block title %}{{ t('role.choose') }}{% endblock %}
+{% block box %}
+<h2>{{ t('role.choose') }}</h2>
+<p class="sub">{{ t('role.choose_hint') }}</p>
+{% if not habs %}<div class="alert alert-bad">{{ t('login.no_role') }}</div>{% endif %}
+<form method="post" class="rolelist">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ request.args.get('next') or '' }}">
+  {% for h in habs %}
+  <button class="rolecard{{ ' on' if current == h.id }}" name="hab" value="{{ h.id }}">
+    <span class="av">{{ icon('briefcase' if h.role not in ('candidat','stagiaire') else 'user', 18) }}</span>
+    <span><b>{{ t('role.' ~ h.role) }}</b><small>{{ h.scope_name(lang) }}</small></span>
+  </button>
+  {% endfor %}
+</form>
+{% endblock %}

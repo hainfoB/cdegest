@@ -96,6 +96,15 @@ def index():
         else:
             abort(403)
         AuditLog.log(f"report.{act}", details=f"{period.year} S{period.semester}")
+        db.session.flush()
+        if act == "transmit":                       # M-18 : le niveau suivant est prévenu
+            from ..models import User
+            from ..services.events import report_status
+            if r.level == "institute":
+                to = User.having(COORD, wilaya_id=r.wilaya_id).all() + User.having(DFEP, wilaya_id=r.wilaya_id).all()
+            else:
+                to = User.having(MFEP).all()
+            report_status(r, "transmitted", to)
         db.session.commit()
         flash(t("rep.transmitted") if act == "transmit" else t("rep.generated"), "ok")
         return redirect(url_for("reports.index", y=period.year, p=period.code))

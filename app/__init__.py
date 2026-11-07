@@ -38,7 +38,9 @@ def create_app(config_class=Config):
     from .blueprints.sessions import bp as sessions_bp
     from .blueprints.candidatures import bp as cand_bp
     from .blueprints.site import bp as site_bp
-    for b in (auth_bp, main_bp, org_bp, sessions_bp, nesda_bp, public_bp, reports_bp, cand_bp, site_bp):
+    from .blueprints.espace import bp as espace_bp
+    from .blueprints.integration import bp as integ_bp
+    for b in (auth_bp, main_bp, org_bp, sessions_bp, nesda_bp, public_bp, reports_bp, cand_bp, site_bp, espace_bp, integ_bp):
         app.register_blueprint(b)
 
     from .cli import register_cli
@@ -66,6 +68,8 @@ def _register_template_helpers(app):
                "qr": qr_svg, "arr": "←" if text_dir() == "rtl" else "→",
                "back": "→" if text_dir() == "rtl" else "←"}
         if current_user.is_authenticated:
+            ctx["my_habs"] = current_user.valid_habilitations()
+            ctx["active_hab"] = current_user.active_hab
             ctx["nav"] = nav_for(current_user)
             ctx["scope_label"] = scope_label(current_user, lang)
             ctx["sees_people"] = sees_people(current_user)
@@ -74,6 +78,12 @@ def _register_template_helpers(app):
     @app.template_filter("d")
     def fmt_date(d):
         return d.strftime("%d/%m/%Y") if d else "—"
+
+    @app.template_filter("dz")
+    def fmt_dz(d):
+        """Heure d'Alger (UTC+1) pour une date enregistrée en UTC."""
+        from datetime import timedelta
+        return (d + timedelta(hours=1)).strftime("%d/%m/%Y %H:%M") if d else "—"
 
     @app.template_filter("dt")
     def fmt_dt(d):
@@ -100,8 +110,15 @@ def _register_guards(app):
 
     @app.before_request
     def force_password_change():
-        if (current_user.is_authenticated and current_user.must_change_password
-                and request.endpoint not in ("org.account", "auth.logout", "static", "main.set_lang")):
+        free = ("org.account", "auth.logout", "static", "main.set_lang", "auth.charter", "auth.switch_role",
+                "auth.choose_role")
+        if not current_user.is_authenticated or request.endpoint in free:
+            return None
+        if current_user.role is None:            # plus aucune habilitation valide
+            return redirect(url_for("auth.choose_role"))
+        if current_user.is_agent and current_user.charter_at is None:
+            return redirect(url_for("auth.charter"))
+        if current_user.must_change_password:
             return redirect(url_for("org.account"))
 
 

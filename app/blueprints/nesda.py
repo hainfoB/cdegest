@@ -34,8 +34,12 @@ def review(sid):
     s = db.session.get(Session, sid) or abort(404)
     if not can_see_session(current_user, s):
         abort(403)
+    conflict = T.separation_conflict(s, current_user)
     if request.method == "POST":
         act = request.form.get("action")
+        if conflict:                          # RG-36 : pas de validation de son propre travail
+            flash(t("nesda.conflict"), "err")
+            return redirect(url_for("nesda.review", sid=s.id))
         ok = (T.nesda_validate(s, current_user) if act == "validate"
               else T.nesda_reject(s, current_user, request.form.get("note")) if act == "reject" else False)
         if ok:
@@ -52,10 +56,10 @@ def review(sid):
     slots = [sl for g in s.groups for sl in g.slots]
     uncalled = [sl for sl in slots if sl.day <= date.today() and sl.called_at is None and not sl.cancelled]
     cancelled = [sl for sl in slots if sl.cancelled]
-    can_act = (current_user.role == NESDA and s.nesda_status == "submitted") or \
-              (current_user.role in (NESDA_DG, ADMIN) and s.nesda_status in ("submitted", "wilaya_ok"))
+    can_act = ((current_user.role == NESDA and s.nesda_status == "submitted") or
+               (current_user.role in (NESDA_DG, ADMIN) and s.nesda_status in ("submitted", "wilaya_ok"))) and not conflict
     return render_template("nesda/review.html", s=s, enrs=enrs, stats=stats, elig=elig, corrections=corrections,
-                           uncalled=uncalled, cancelled=cancelled, n_slots=len(slots), can_act=can_act,
+                           uncalled=uncalled, cancelled=cancelled, n_slots=len(slots), can_act=can_act, conflict=conflict,
                            can_print=current_user.role in CERT_PRINTERS and s.certificates_open)
 
 

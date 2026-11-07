@@ -111,14 +111,24 @@ def _phone():
     return "0" + R.choice("567") + "".join(R.choice("0123456789") for _ in range(8))
 
 
+def demo_nin(key):
+    """NIN fictif déterministe (18 chiffres, jamais terminé par 0000 ni 9999)."""
+    import hashlib
+    n = "1" + str(int(hashlib.sha256(("demo|" + key).encode()).hexdigest(), 16))[:15] + "47"
+    return n
+
+
 def _user(email, name, role, inst=None, wilaya=None):
-    u = User.query.filter_by(email=email).first()
-    if u:
-        return u
-    u = User(email=email, name=name, role=role, institute=inst, wilaya=wilaya or (inst.wilaya if inst else None),
-             lang="ar")
-    u.set_password(_pwd())
-    db.session.add(u)
+    from .utils import utcnow
+    nin = demo_nin(email)
+    u = User.by_nin(nin)
+    if u is None:
+        u = User(email=email, name=name, lang="ar", identity_source="simule", charter_at=utcnow())
+        u.nin = nin
+        u.set_password(_pwd())
+        db.session.add(u)
+        db.session.flush()
+    u.grant(role, institute=inst, wilaya=wilaya or (inst.wilaya if inst else None), reason="compte de démonstration")
     return u
 
 
@@ -161,9 +171,10 @@ def seed_demo(today=None):
     teachers = {}
     for wcode, insts in insts_by_w.items():
         for i in insts:
-            if not User.query.filter_by(institute_id=i.id, role="resp").first():
+            if not User.having("resp", institute_id=i.id).first():
                 _user(f"resp.{i.code.lower()}@cdegest.dz", f"Responsable CDE {i.code}", "resp", inst=i)
-            lst = User.query.filter_by(institute_id=i.id, role="formateur").all()
+            db.session.flush()
+            lst = User.having("formateur", institute_id=i.id).all()
             names = R.sample(TEACHER_NAMES, 4)
             k = 0
             while len(lst) < 4:
@@ -171,7 +182,7 @@ def seed_demo(today=None):
                 k += 1
             teachers[i.id] = lst
     db.session.flush()
-    demo_teacher = User.query.filter_by(email="formateur.bba01@cdegest.dz").first()
+    demo_teacher = User.by_nin("109934010000005016")
     if demo_teacher and demo_teacher.name == "Enseignant INSFP BBA 01":
         demo_teacher.name = "Mme Yasmina Belaid"
 
@@ -213,7 +224,9 @@ def seed_demo(today=None):
                                 sex=sex, phone=_phone(), wilaya_id=inst.wilaya_id, origin_institute_id=inst.id,
                                 specialty=R.choice(SPECIALTIES), status=R.choice(["stagiaire", "diplome", "diplome"]),
                                 birth_date=date(R.randint(1996, 2006), R.randint(1, 12), R.randint(1, 28)),
-                                consent_at=datetime.combine(start - timedelta(days=10), time(10)))
+                                consent_at=datetime.combine(start - timedelta(days=10), time(10)),
+                                identity_source=R.choice(["simule"] * 9 + ["declaratif"]))
+                p.nin = demo_nin(f"p{len(people)}|{p.phone}")
                 db.session.add(p)
                 e = Enrollment(session=s, group=g, participant=p, status="confirmed",
                                source=R.choice(["public", "public", "cde"]),
@@ -269,7 +282,7 @@ def seed_demo(today=None):
                 s.nesda_status = "submitted"
                 s.nesda_submitted_at = datetime.combine(close_day, time(9))
             if status == "validated":
-                nesda = User.query.filter_by(role="nesda", wilaya_id=inst.wilaya_id).first()
+                nesda = User.having("nesda", wilaya_id=inst.wilaya_id).first()
                 s.nesda_status, s.nesda_w_by_id = "validated", nesda.id if nesda else None
                 vday = close_day + timedelta(days=R.randint(3, 9))
                 s.nesda_w_at = datetime.combine(vday, time(14))
@@ -288,7 +301,7 @@ def seed_demo(today=None):
                                                       created_at=datetime.combine(s.ends_on + timedelta(days=R.randint(1, 5)), time(18))))
                         e.survey_done = True
             if status == "rejected":
-                nesda = User.query.filter_by(role="nesda", wilaya_id=inst.wilaya_id).first()
+                nesda = User.having("nesda", wilaya_id=inst.wilaya_id).first()
                 s.nesda_status = "rejected"
                 s.nesda_w_by_id = nesda.id if nesda else None
                 s.nesda_note = "Appel manquant pour le créneau du module 2 (groupe G2) : merci de compléter puis de resoumettre."
@@ -393,7 +406,7 @@ def seed_demo(today=None):
     # current year: set at the opening of the training year for the 69 wilayas
     generic = {"groups": 8, "sessions": 4, "trained": 120, "teachers": 10, "hours": 1400, "fill": 80, "attendance": 85,
                "dropouts": 12, "dropout_rate": 10, "certificates": 95, "accepted": 15, "conversion": 12,
-               "completed": 5, "satisfaction": 85, "response": 60}
+               "completed": 5, "satisfaction": 85, "response": 60, "demands": 400, "decision_days": 10, "verified": 95}
     for w in wil.values():
         if w.code in data_codes:
             base = realised(w.code, prev_label, 0)
@@ -430,7 +443,7 @@ def seed_demo(today=None):
         prog = Programme(wilaya_id=wil[wcode].id, year=label, status=status)
         db.session.add(prog)
         if status == "validated":
-            prog.validated_by_id = User.query.filter_by(role="dfep", wilaya_id=wil[wcode].id).first().id
+            prog.validated_by_id = User.having("dfep", wilaya_id=wil[wcode].id).first().id
             prog.validated_at = datetime.combine(cur_start if label == cur_label else p_s1[0], time(10))
         for i in insts_by_w[wcode]:
             for code in R.sample([c for c, *_ in CATALOGUE], 4):
@@ -446,13 +459,13 @@ def seed_demo(today=None):
         for wcode in data_codes:
             w = wil[wcode]
             for i in insts_by_w[wcode]:
-                resp = User.query.filter_by(institute_id=i.id, role="resp").first()
+                resp = User.having("resp", institute_id=i.id).first()
                 db.session.add(Report(level="institute", institute_id=i.id, wilaya_id=w.id, year=prev_label,
                                       semester=sem, status="transmitted",
                                       snapshot=json.dumps(_snapshot_institute(i, per)), generated_at=when,
                                       transmitted_by_id=resp.id if resp else None, transmitted_at=when))
             db.session.flush()
-            dfep = User.query.filter_by(role="dfep", wilaya_id=w.id).first()
+            dfep = User.having("dfep", wilaya_id=w.id).first()
             db.session.add(Report(level="wilaya", wilaya_id=w.id, year=prev_label, semester=sem, status="transmitted",
                                   snapshot=json.dumps(_snapshot_wilaya(w, per)), generated_at=when + timedelta(days=5),
                                   transmitted_by_id=dfep.id if dfep else None, transmitted_at=when + timedelta(days=5)))
@@ -481,13 +494,81 @@ def seed_demo(today=None):
                                 diploma_year=R.choice([2023, 2024, 2025, 2026]), idea=IDEAS[j] if lvl >= 2 else None,
                                 sector=SECT[j], institute_id=i.id, consent_at=datetime.combine(today, time(9)),
                                 status=st, note="Hors public cible (ni stagiaire ni diplômé de la FP)" if st == "refusee" else None,
-                                created_at=datetime.combine(today - timedelta(days=R.randint(0, 20)), time(R.randint(8, 21), R.randint(0, 59))))
+                                created_at=datetime.combine(today - timedelta(days=R.randint(0, 40)), time(R.randint(8, 20), R.randint(0, 59))))
+                c.nin = demo_nin(f"c{n_c}|{i.code}")
+                src = R.choice(["simule"] * 6 + ["declaratif"])
+                c.identity_source, c.diploma_source, c.level_source = src, src, src
+                c.diploma = f"{R.choice(['BTS', 'BT', 'CAP', 'CMP'])} — {c.specialty}"
+                c.level = R.choice(["3e année secondaire", "4e année moyenne", "Universitaire"])
+                if st in ("refusee",):
+                    c.reviewed_at = c.created_at + timedelta(days=R.randint(2, 12))
                 db.session.add(c)
                 n_c += 1
     db.session.commit()
+    _seed_v13(today, insts_by_w)
     n_att = Attendance.query.count()
     return (f"seed-demo: {counter} sessions, {len(people)} participants, {n_att} présences, "
             f"{Objective.query.count()} objectifs, {Report.query.count()} rapports, {n_c} candidatures (données fictives)")
+
+
+def _seed_v13(today, insts_by_w):
+    """v1.3 : parcours du candidat de démonstration, messages simulés, échanges journalisés, connecteurs."""
+    from .models import Candidature, Connector, Habilitation
+    from .services import connectors as C
+    from .services import events as E
+    for code in C.CONNECTORS:
+        db.session.merge(Connector(code=code, mode="simule"))
+    # quelques appels aux administrations (simulés), pour le journal des échanges
+    for c in Candidature.query.order_by(Candidature.id).limit(12):
+        C.identity(c.nin)
+        C.diplomas(c.nin)
+        C.level(c.nin)
+    # candidat de démonstration : demande orientée vers la session en cours du CDE INSFP BBA 01, inscription validée
+    lina = User.by_nin("100234000000012024")
+    bba01 = Institute.query.filter_by(code="INSFP-BBA-01").first()
+    s = (Session.query.filter(Session.institute_id == bba01.id, Session.status.in_(("open", "running")))
+         .order_by(Session.starts_on.desc()).first()) if bba01 else None
+    if lina is not None and s is not None:
+        lina.birth_date, lina.sex = date(2002, 3, 12), "F"
+        c = Candidature(answers="discover=0,skills=1,create_soon=1,project_ready=0,business=1,initiative=1",
+                        last_name="Saidi", first_name="Lina", sex="F", birth_date=lina.birth_date, phone=lina.phone,
+                        email=lina.email, wilaya_id=bba01.wilaya_id, pstatus="diplome", specialty="Informatique — bases de données",
+                        diploma_year=2024, idea="Agence de développement web", sector="numerique", institute_id=bba01.id,
+                        consent_at=datetime.combine(today - timedelta(days=12), time(10)), status="orientee", source="cdegest",
+                        user_id=lina.id, identity_source="simule", diploma="BTS — Informatique — bases de données",
+                        diploma_source="simule", level="3e année secondaire", level_source="simule",
+                        created_at=datetime.combine(today - timedelta(days=12), time(10)),
+                        reviewed_at=datetime.combine(today - timedelta(days=9), time(11)))
+        c.nin = lina.nin
+        db.session.add(c)
+        db.session.flush()
+        E.candidature_received(c)
+        p = Participant(first_name="Lina", last_name="Saidi", sex="F", phone=lina.phone, email=lina.email,
+                        wilaya_id=bba01.wilaya_id, origin_institute_id=bba01.id, specialty=c.specialty, status="diplome",
+                        birth_date=lina.birth_date, consent_at=c.consent_at, user_id=lina.id, identity_source="simule")
+        p.nin = lina.nin
+        db.session.add(p)
+        db.session.flush()
+        g = s.groups[0] if s.groups else None
+        e = Enrollment(session=s, group=g, participant=p, status="confirmed", source="candidature")
+        db.session.add(e)
+        db.session.flush()
+        c.enrollment = e
+        E.candidature_oriented(c, s)
+        E.enrollment_confirmed(e)
+    # une personne invitée qui n'a pas encore activé son compte (habilitation « en attente »)
+    resp = User.by_nin("109934010000004015")
+    inv = _user("ens.invite.bba01@cdegest.dz", "Mme Nadia Ferhat", "formateur", inst=bba01)
+    for h in inv.habilitations:
+        h.status, h.granted_by = "pending", resp
+    inv.new_invite()
+    db.session.flush()
+    E.habilitation_changed(inv.habilitations[0], "invited", resp)
+    # messages des demandes récentes (confirmation) et résumés du jour
+    for c in Candidature.query.filter(Candidature.created_at >= datetime.combine(today - timedelta(days=2), time(0))).limit(15):
+        E.candidature_received(c)
+    E.run_digests(today)
+    db.session.commit()
 
 
 # ---------------------------------------------------------------- site public (événements, signalements)

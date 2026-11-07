@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon %}
+{% from "partials/ui.html" import flashes with context %}
+{% block body %}
+<div class="auth">
+  <aside class="auth-side">
+    {% include "partials/net.html" %}
+    <a class="logo" href="{{ url_for('main.home') }}"><img src="{{ url_for('static', filename='img/logo-cde.png') }}" alt="CDE" style="height:84px"></a>
+    <div><h1>{{ t('home.title') }}</h1><p>{{ t('brand.platform') }}</p></div>
+    <p style="font-size:13px;color:var(--mut)">© {{ today.year }} · {{ t('footer.rights') }}</p>
+  </aside>
+  <main class="auth-main" id="main">
+    <div class="auth-box">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:28px">{% include "partials/langsw.html" %}</div>
+      {{ flashes() }}
+      {% block box %}{% endblock %}
+      <p class="hint" style="margin-top:22px">{{ icon('shield', 14) }} {{ t('fraud.notice') }}</p>
+    </div>
+  </main>
+</div>
+{% endblock %}

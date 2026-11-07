@@ -1,27 +1,58 @@
 {% extends "app.html" %}
+{% from "partials/icons.html" import icon %}
 {% block title %}{{ t('nav.users') }}{% endblock %}
 {% block content %}
-<div class="pagehead"><div><h1>{{ t('nav.users') }}</h1><p>{{ t('users.hint') }}</p></div></div>
-<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr><th>{{ t('users.name') }}</th><th>{{ t('login.email') }}</th><th>{{ t('users.role') }}</th><th>{{ t('users.scope') }}</th><th>{{ t('users.last_login') }}</th><th></th></tr></thead>
-<tbody>{% for u in rows %}<tr class="{{ 'dim' if not u.active }}"><td><b>{{ u.name }}</b></td><td dir="ltr" style="text-align:start">{{ u.email }}</td><td><span class="badge b-ink">{{ t('role.' ~ u.role) }}</span></td>
-<td>{{ u.institute.code if u.institute else (u.wilaya.name(lang) if u.wilaya else t('scope.national')) }}</td><td>{{ u.last_login_at|dt }}</td>
-<td class="actions">{% if can_manage(u) %}<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ u.id }}">
-  <button class="btn btn-sm btn-line" name="action" value="reset">{{ t('users.reset') }}</button>
-  <button class="btn btn-sm {{ 'btn-bad' if u.active else 'btn-cde' }}" name="action" value="toggle">{{ t('users.disable') if u.active else t('users.enable') }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+<div class="pagehead"><div><h1>{{ t('nav.users') }}</h1><p>{{ t('hab.hint') }}</p></div></div>
+<div class="tabs" style="margin-bottom:12px">
+  {% for k in ('active','pending','suspended','revoked') %}<a href="{{ url_for('org.users', st=k) }}" class="tab {{ 'on' if st == k }}">{{ t('hab.st.' ~ k) }} <span class="badge b-ink">{{ counts[k] }}</span></a>{% endfor %}
+</div>
+<div class="panel" style="overflow-x:auto"><table class="tbl"><thead><tr>
+  <th>{{ t('users.name') }}</th><th>NIN</th><th>{{ t('users.role') }}</th><th>{{ t('users.scope') }}</th><th>{{ t('hab.period') }}</th><th>{{ t('hab.by') }}</th><th>{{ t('users.last_login') }}</th><th></th></tr></thead>
+<tbody>{% for h in rows %}{% set u = h.user %}<tr class="{{ 'dim' if h.status != 'active' }}">
+  <td><b>{{ u.name }}</b><br><small dir="ltr">{{ u.email or '' }}</small>{% if u.habilitations|length > 1 %}<br><span class="badge b-wait">{{ t('hab.multi', n=u.habilitations|selectattr('status','equalto','active')|list|length) }}</span>{% endif %}</td>
+  <td dir="ltr" style="text-align:start;white-space:nowrap">{{ u.nin_masked }}</td>
+  <td><span class="badge b-ink">{{ t('role.' ~ h.role) }}</span>{% if h.status != 'active' %}<br><small>{{ t('hab.st.' ~ h.status) }}</small>{% endif %}</td>
+  <td>{{ h.scope_name(lang) }}</td>
+  <td style="white-space:nowrap">{{ h.starts_on|d }}{% if h.ends_on %} → {{ h.ends_on|d }}{% endif %}</td>
+  <td>{{ h.granted_by.name if h.granted_by else '—' }}{% if h.reason %}<br><small>{{ h.reason }}</small>{% endif %}</td>
+  <td>{{ u.last_login_at|dt }}</td>
+  <td class="actions">{% if can_manage(h) %}
+    <form method="post" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="id" value="{{ h.id }}">
+      {% if h.status in ('active','suspended') %}<input class="input sm" name="why" placeholder="{{ t('hab.why') }}" style="width:150px">{% endif %}
+      {% if h.status == 'active' %}<button class="btn btn-sm btn-line" name="action" value="suspend">{{ t('hab.suspend') }}</button>{% endif %}
+      {% if h.status == 'suspended' %}<button class="btn btn-sm btn-cde" name="action" value="restore">{{ t('hab.restore') }}</button>{% endif %}
+      {% if h.status in ('active','suspended') %}<button class="btn btn-sm btn-bad" name="action" value="revoke">{{ t('hab.revoke') }}</button>{% endif %}
+      {% if h.status == 'pending' %}<button class="btn btn-sm btn-line" name="action" value="reset">{{ t('hab.reinvite') }}</button>{% endif %}
+    </form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="8" class="empty">{{ t('none') }}</td></tr>{% endfor %}</tbody></table></div>
+
 {% if creatable %}
-<form class="panel form" method="post" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="create">
-  <h2>{{ t('users.add') }}</h2>
+<form class="panel form" method="post" style="margin-top:18px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2>{{ t('hab.grant') }}</h2>
+  <p class="hint">{{ t('hab.grant_hint') }}</p>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('login.nin') }}</label><input class="input sm" name="nin" inputmode="numeric" dir="ltr" maxlength="22" required value="{{ lookup.nin if lookup else '' }}"></div>
+    <div class="field" style="align-self:end"><button class="btn btn-sm btn-line" name="action" value="lookup" formnovalidate>{{ icon('search', 14) }} {{ t('hab.lookup') }}</button></div>
+  </div>
+  {% if lookup %}
+  <div class="alert {{ 'alert-ok' if lookup.status == 'trouve' else 'alert-info' }}">{{ icon('info', 16) }}<span>
+    {% if lookup.existing %}{{ t('hab.existing', name=lookup.existing.name) }}{% elif lookup.status == 'trouve' %}{{ t('hab.found') }} : <b>{{ lookup.data.prenom_lat }} {{ lookup.data.nom_lat }}</b> ({{ lookup.data.prenom_ar }} {{ lookup.data.nom_ar }}) · <span class="srcv {{ lookup.source }}">{{ t('src.' ~ lookup.source) }}</span>{% else %}{{ t('ec.' ~ lookup.status) }}{% endif %}</span></div>
+  {% endif %}
   <div class="fgrid">
     <div class="field"><label>{{ t('users.role') }}</label><select class="input sm" name="role" id="role" required>{% for r in creatable %}<option value="{{ r }}">{{ t('role.' ~ r) }}</option>{% endfor %}</select></div>
-    <div class="field"><label>{{ t('users.name') }}</label><input class="input sm" name="name" required></div>
-    <div class="field"><label>{{ t('login.email') }}</label><input class="input sm" type="email" name="email" required dir="ltr"></div>
-    <div class="field"><label>{{ t('pub.phone') }}</label><input class="input sm" name="phone" dir="ltr"></div>
     <div class="field" data-for="inst"><label>{{ t('dash.table.institute') }}</label><select class="input sm" name="institute">{% for i in institutes %}<option value="{{ i.id }}">{{ i.code }}</option>{% endfor %}</select></div>
     {% if current_user.role in ('admin','mfep','nesda_dg') %}<div class="field" data-for="wil"><label>{{ t('dash.table.wilaya') }}</label><select class="input sm" name="wilaya">{% for w in wilayas %}<option value="{{ w.code }}">{{ w.code }} · {{ w.name(lang) }}</option>{% endfor %}</select></div>{% endif %}
-    <div class="field"><label>{{ t('lang') }}</label><select class="input sm" name="lang"><option value="ar">العربية</option><option value="fr">Français</option><option value="en">English</option></select></div>
+    <div class="field"><label>{{ t('hab.ends') }}</label><input class="input sm" type="date" name="ends_on"></div>
+    <div class="field" style="grid-column:span 2"><label>{{ t('hab.reason') }}</label><input class="input sm" name="reason" required placeholder="{{ t('hab.reason_ph') }}"></div>
   </div>
-  <p class="hint">{{ t('users.pwd_hint') }}</p>
-  <div class="row end"><button class="btn btn-cde btn-sm">+ {{ t('users.add') }}</button></div>
+  <fieldset class="panel" style="background:var(--bg);margin:8px 0"><legend class="hint">{{ t('hab.new_person') }}</legend>
+  <div class="fgrid">
+    <div class="field"><label>{{ t('users.name') }}</label><input class="input sm" name="name" value="{{ (lookup.data.prenom_lat ~ ' ' ~ lookup.data.nom_lat) if lookup and lookup.data else '' }}"></div>
+    <div class="field"><label>{{ t('login.email') }}</label><input class="input sm" type="email" name="email" dir="ltr"></div>
+    <div class="field"><label>{{ t('pub.phone') }}</label><input class="input sm" name="phone" dir="ltr"></div>
+    <div class="field"><label>{{ t('lang') }}</label><select class="input sm" name="lang"><option value="ar">العربية</option><option value="fr">Français</option><option value="en">English</option></select></div>
+  </div></fieldset>
+  <div class="row end"><button class="btn btn-cde btn-sm" name="action" value="grant">+ {{ t('hab.grant') }}</button></div>
 </form>
 <script>
 (()=>{const r=document.getElementById('role');const inst={{ NEEDS_INSTITUTE|list|tojson }},wil={{ NEEDS_WILAYA|list|tojson }};
