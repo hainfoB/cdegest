@@ -39,7 +39,7 @@
  "login.password": "Password",
  "login.remember": "Stay signed in on this device",
  "login.submit": "Sign in",
- "login.error": "Incorrect email or password.",
+ "login.error": "Incorrect NIN or password.",
  "login.blocked": "Too many attempts. Try again in a few minutes.",
  "login.inactive": "This account is disabled.",
  "login.demo.title": "Demo accounts",

@@ -39,7 +39,7 @@
  "login.password": "Mot de passe",
  "login.remember": "Rester connecté sur cet appareil",
  "login.submit": "Se connecter",
- "login.error": "E-mail ou mot de passe incorrect.",
+ "login.error": "NIN ou mot de passe incorrect.",
  "login.blocked": "Trop de tentatives. Réessayez dans quelques minutes.",
  "login.inactive": "Ce compte est désactivé.",
  "login.demo.title": "Comptes de démonstration",

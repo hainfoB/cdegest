@@ -384,7 +384,7 @@ def objectives():
     for o in Objective.query.filter(Objective.year == year, Objective.wilaya_id == w.id,
                                     Objective.institute_id.isnot(None)):
         sums[(o.kpi, o.semester)] += o.target
-    return render_template("org/objectives.html", w=w, year=year, years=recent_years(3) + [_next_year(year)],
+    return render_template("org/objectives.html", w=w, year=year, years=_year_choices(year),
                            insts=insts, sel_inst=sel_inst, wgrid=wgrid, igrid=igrid, sums=sums,
                            can_edit_w=can_edit_w, can_edit_i=can_edit_i, KPIS=K.KPIS, RATES=K.RATES,
                            wilayas=Wilaya.query.order_by(Wilaya.code).all(), families=K.KPI_FAMILIES)
@@ -393,6 +393,15 @@ def objectives():
 def _next_year(label):
     y = int(label[:4]) + 1
     return f"{y}-{y + 1}"
+
+
+def _year_choices(year):
+    """Années proposées : les 3 dernières, l'année suivante, et toujours l'année affichée."""
+    years = recent_years(3)
+    years.insert(0, _next_year(years[0]))
+    if year not in years:
+        years.append(year)
+    return sorted(set(years), reverse=True)
 
 
 # ------------------------------------------------------------------ programme annuel
@@ -454,7 +463,7 @@ def programme():
         realised[l.id] = (Group.query.join(Session, Group.session_id == Session.id)
                           .filter(Session.template_id == l.template_id, Session.institute_id == l.institute_id,
                                   Session.starts_on.between(a, b), Session.status != "draft").count())
-    return render_template("org/programme.html", w=w, year=year, years=recent_years(3) + [_next_year(year)],
+    return render_template("org/programme.html", w=w, year=year, years=_year_choices(year),
                            prog=prog, lines=lines, realised=realised, can_edit=can_edit,
                            can_validate=can_validate, insts=[i for i in w.institutes if i.active],
                            tpls=WorkshopTemplate.query.filter_by(active=True).order_by(WorkshopTemplate.code).all(),

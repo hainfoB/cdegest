@@ -300,3 +300,21 @@ def test_demand_indicators(app):
     db.session.commit()
     v = K.kpis_for_institutes([i.id], Period(None, "A"))
     assert v["demands"] == 4 and v["verified"] == 50.0 and v["decision_days"] == 1.5
+
+
+def test_login_error_speaks_of_nin(client):
+    client.get("/lang/fr")
+    r = client.post("/login", data={"nin": "177700000000000001", "password": "faux-mot-de-passe"})
+    assert "NIN ou mot de passe incorrect" in r.get_data(as_text=True)
+
+
+def test_programme_year_list_keeps_the_displayed_year(client):
+    from app.services.period import recent_years
+    login(client, "coord.bba@cdegest.dz")
+    y0 = int(recent_years(1)[0][:4]) + 1
+    nxt = f"{y0}-{y0 + 1}"
+    html = client.get(f"/programme?y={nxt}").get_data(as_text=True)
+    assert f"<option selected>{nxt}</option>" in html
+    far = f"{y0 + 3}-{y0 + 4}"
+    html = client.get(f"/programme?y={far}").get_data(as_text=True)
+    assert f"<option selected>{far}</option>" in html
