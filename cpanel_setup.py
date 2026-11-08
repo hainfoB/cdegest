@@ -1,6 +1,7 @@
 """Installation et mise à jour de CDEgest sur un hébergement cPanel (à lancer après chaque mise à jour).
 
 Dans cPanel → « Setup Python App » → votre application → « Execute python script » : cpanel_setup.py
+(adresses lues dans les variables APP_URL et SIM_URL de l'application si elles existent),
 ou dans le Terminal de cPanel, environnement de l'application activé :
     python cpanel_setup.py --url https://cdegest.mondomaine.dz --sim-url https://sim.mondomaine.dz
 
@@ -26,7 +27,7 @@ def flask(*args, check=True):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--url", default=os.environ.get("APP_URL", ""), help="adresse publique, ex. https://cdegest.mondomaine.dz")
-    ap.add_argument("--sim-url", default=None, help="adresse du simulateur (recette) ; omis = aucun simulateur")
+    ap.add_argument("--sim-url", default=os.environ.get("SIM_URL") or None, help="adresse du simulateur (recette) ; omis = aucun simulateur")
     a = ap.parse_args()
     if sys.version_info < (3, 10):
         sys.exit("Python 3.10 ou plus récent est requis : choisissez une version plus récente dans « Setup Python App ».")
