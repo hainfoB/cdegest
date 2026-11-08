@@ -523,6 +523,12 @@ def _seed_v13(today, insts_by_w):
         C.identity(c.nin)
         C.diplomas(c.nin)
         C.level(c.nin)
+    # mode réel en recette : si un simulateur d'administrations est raccordé (CONN_BASE_URL), les quatre
+    # connecteurs entrants l'interrogent par le réseau ; sinon ils restent en mode simulé
+    from .services import real as R
+    if R.configure_from_env():
+        for code in R.INBOUND:
+            R.connector(code).mode = "reel"
     # candidat de démonstration : demande orientée vers la session en cours du CDE INSFP BBA 01, inscription validée
     lina = User.by_nin("100234000000012024")
     bba01 = Institute.query.filter_by(code="INSFP-BBA-01").first()

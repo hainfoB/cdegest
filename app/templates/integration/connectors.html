@@ -13,6 +13,45 @@
   <td>{{ stats[code].n }} <small>({{ stats[code].ok }} ✓ · {{ stats[code].ko }} ✗)</small></td></tr>{% endfor %}</tbody></table></div>
 <p class="hint">{{ t('conn.modes_help') }}</p>
 
+<section class="panel" style="margin-top:18px"><h2>{{ t('conn.real_title') }}</h2><p class="hint">{{ t('conn.real_hint') }}</p>
+{% for code in INBOUND %}{% set r = real[code] %}{% set c = conns[code] %}
+<details class="realcfg" {{ 'open' if open_cfg == code or r.open }}>
+  <summary><b>{{ c[2] if lang == 'ar' else c[1] }}</b>
+    <span class="badge {{ 'b-ok' if modes[code] == 'reel' else 'b-draft' }}">{{ t('conn.m.' ~ modes[code]) }}</span>
+    {% if r.url %}<span class="srcv {{ 'etat_civil' if r.env == 'production' else 'recette' }}">{{ t('conn.env.' ~ r.env) }}</span>{% else %}<small class="muted">{{ t('conn.no_url') }}</small>{% endif %}
+    {% if r.open %}<span class="badge b-bad">{{ t('conn.circuit_open', until=(r.open_until|dz)) }}</span>{% elif r.fails %}<span class="badge b-bad">{{ t('conn.fails', n=r.fails) }}</span>{% endif %}
+  </summary>
+  <div class="realgrid">
+  <form class="form" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="config"><input type="hidden" name="code" value="{{ code }}">
+    <div class="field"><label>{{ t('conn.url') }}</label><input class="input sm" name="url" dir="ltr" value="{{ r.url or '' }}" placeholder="https://…"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="field" style="flex:1;min-width:150px"><label>{{ t('conn.environment') }}</label><select class="input sm" name="environment">{% for e in ('recette','production') %}<option value="{{ e }}" {{ 'selected' if r.env == e }}>{{ t('conn.env.' ~ e) }}</option>{% endfor %}</select></div>
+      <div class="field" style="width:120px"><label>{{ t('conn.timeout') }}</label><input class="input sm" type="number" min="1" max="30" name="timeout" value="{{ r.timeout or 5 }}"></div>
+    </div>
+    <label class="check"><input type="checkbox" name="convention" value="1"> {{ t('conn.convention') }}</label>
+    <div class="field"><label>{{ t('conn.mapping') }} {% if r.custom_map %}<span class="badge b-ink">{{ t('conn.map_custom') }}</span>{% endif %}</label>
+      <textarea class="input sm mono" name="mapping" rows="9" dir="ltr" spellcheck="false">{{ maps[code] }}</textarea>
+      <small class="hint">{{ t('conn.map_help') }}</small></div>
+    <button class="btn btn-cde btn-sm">{{ t('save') }}</button>
+  </form>
+  <div>
+    <dl class="kv">
+      <dt>{{ t('conn.secret_key') }}</dt><dd>{{ t('yes') if r.key else t('no') }}</dd>
+      <dt>{{ t('conn.secret_mtls') }}</dt><dd>{{ t('yes') if r.mtls else t('no') }}</dd>
+      <dt>{{ t('conn.last_ok') }}</dt><dd>{{ r.last_ok|dz if r.last_ok else '—' }}</dd>
+      <dt>{{ t('conn.fails_label') }}</dt><dd>{{ r.fails }}</dd>
+      {% if r.error %}<dt>{{ t('conn.last_error') }}</dt><dd>{{ r.error }}</dd>{% endif %}
+    </dl>
+    <form method="post" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="code" value="{{ code }}">
+      <button class="btn btn-sm btn-line" name="action" value="health">{{ t('conn.health') }}</button>
+      {% if r.custom_map %}<button class="btn btn-sm btn-line" name="action" value="reset_map">{{ t('conn.map_default') }}</button>{% endif %}
+      {% if r.open or r.fails %}<button class="btn btn-sm btn-line" name="action" value="rearm">{{ t('conn.rearm') }}</button>{% endif %}
+    </form>
+    <p class="hint" style="margin-top:10px">{{ t('conn.reliability') }}</p>
+  </div></div>
+</details>{% endfor %}
+</section>
+
 <div class="grid2" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-top:18px">
 <form class="panel form" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="test">
   <h2>{{ t('conn.test') }}</h2><p class="hint">{{ t('conn.test_hint') }}</p>

@@ -34,7 +34,14 @@ class Connector(db.Model):
     __tablename__ = "connector"
     code = db.Column(db.String(20), primary_key=True)        # etat_civil | mfep_diplomes | mfep_stage | men | nesda | mfep_stats
     mode = db.Column(db.String(10), default="simule", nullable=False)
-    url = db.Column(db.String(200))
+    url = db.Column(db.String(200))                          # adresse du serveur du partenaire (mode réel)
+    environment = db.Column(db.String(10), default="recette", nullable=False, server_default="recette")  # recette | production
+    mapping = db.Column(db.Text)                             # correspondance des champs (JSON) ; vide = correspondance par défaut
+    timeout_s = db.Column(db.Integer, default=5, nullable=False, server_default="5")
+    fail_count = db.Column(db.Integer, default=0, nullable=False, server_default="0")   # échecs consécutifs
+    open_until = db.Column(db.DateTime)                      # coupe-circuit ouvert jusqu'à…
+    last_ok_at = db.Column(db.DateTime)
+    last_error = db.Column(db.String(160))
     updated_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     updated_at = db.Column(db.DateTime)
 

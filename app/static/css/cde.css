@@ -487,3 +487,13 @@ code.copy{display:block;margin-top:6px;background:#fff;padding:8px 10px;border-r
 .srcv.simule{background:#FFF1E3;color:#B85400}
 .srcv.declaratif{background:#EEF1F4;color:#5E6E80}
 .alert-ok{background:#E6F4EA;color:#1E7A43}
+/* v1.3 — mode réel des connecteurs */
+.srcv.recette{background:#E7EEF8;color:#1F4E89}
+.realcfg{border:1px solid #e6ecf0;border-radius:10px;margin-top:10px;background:#fff}
+.realcfg>summary{cursor:pointer;padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;list-style:none}
+.realcfg>summary::-webkit-details-marker{display:none}
+.realcfg>summary::before{content:"▸";color:var(--mut)}.realcfg[open]>summary::before{content:"▾"}
+.realgrid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;padding:4px 14px 14px}
+.realgrid textarea{font-size:12px;line-height:1.45;width:100%}
+.realgrid .check{margin-bottom:12px}
+@media (max-width:820px){.realgrid{grid-template-columns:1fr}}

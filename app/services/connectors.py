@@ -1,9 +1,13 @@
 """Échanges avec les administrations (EP-12). Chaque connecteur a trois modes : simulé, réel, désactivé.
 
 En mode simulé, les réponses sont fictives et déterministes (à partir de l'empreinte du NIN) et ne sont
-jamais marquées « vérifiées » (RG-41). Le mode réel exige une convention et une adresse configurée :
-tant qu'elles n'existent pas, le service est « indisponible » et l'inscription passe en saisie déclarative.
-NIN de test : se terminant par 0000 → inconnu ; par 9999 → service indisponible.
+jamais marquées « vérifiées » (RG-41). NIN de test : se terminant par 0000 → inconnu ; par 9999 → indisponible.
+
+En mode réel, CDEgest interroge le serveur du partenaire par HTTPS (client `real.py`) : adresse, délai,
+environnement et correspondance des champs se règlent à l'écran ; clés et certificats viennent des variables
+d'environnement. En environnement « recette » (simulateur d'administrations), les données reçues sont marquées
+« recette » et ne comptent pas comme vérifiées ; seule la « production » (après convention) donne « vérifiée ».
+Sans adresse, ou coupe-circuit ouvert, le service est « indisponible » et la saisie reste déclarative.
 """
 import hashlib
 import time
@@ -71,9 +75,10 @@ def _call(code, raw_nin, fields, builder):
         _log(code, "in", m, h, fields, "desactive", t0)
         return "desactive", None, "declaratif"
     if m == "reel":
-        # aucune adresse ni convention configurée dans le prototype : service indisponible (mode dégradé)
-        _log(code, "in", m, h, fields, "indisponible", t0)
-        return "indisponible", None, "declaratif"
+        from . import real
+        st, data, note = real.fetch(code, nin=n)
+        _log(code, "in", m, h, f"{fields} · {note}", st, t0)
+        return st, data, (real.source(code) if st == "trouve" else "declaratif")
     if n.endswith("9999"):
         _log(code, "in", m, h, fields, "indisponible", t0)
         return "indisponible", None, "declaratif"
@@ -115,8 +120,13 @@ def stage_list(institute_code, count=6):
     """Stagiaires en stage pratique d'un établissement (simulé) : NIN fictifs déterministes."""
     t0 = time.time()
     m = mode("mfep_stage")
+    if m == "reel":
+        from . import real
+        st, data, note = real.fetch("mfep_stage", etablissement=institute_code)
+        _log("mfep_stage", "in", m, None, f"etablissement={institute_code} · {note}", st, t0)
+        return st, (data or [])
     if m != "simule":
-        _log("mfep_stage", "in", m, None, f"etablissement={institute_code}", "indisponible" if m == "reel" else "desactive", t0)
+        _log("mfep_stage", "in", m, None, f"etablissement={institute_code}", "desactive", t0)
         return m, []
     out = []
     base = _seed(institute_code)

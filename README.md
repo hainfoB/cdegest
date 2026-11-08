@@ -69,3 +69,16 @@ Tâches planifiées (production) : `flask notify-run` toutes les heures (envois 
 | `SHOW_SIMULATED_MESSAGES` | `1` en démonstration : affiche le message simulé (code) à l'écran ; `0` en production |
 
 Au démarrage, le `Procfile` applique les migrations, recrée une seule fois la base de démonstration v1.3 (`reset-demo --if-version 1.3`, uniquement si `DEMO_MODE=1`), puis `seed-base` (idempotent).
+
+## Mode réel des connecteurs et simulateur d'administrations
+
+`simulateur/` est un service HTTP indépendant qui joue l'état civil, le SI du MFEP (diplômes, stage) et
+l'Éducation nationale, avec leur propre format, des latences et des pannes (données fictives).
+
+    SIM_API_KEY=cle gunicorn simulateur.app:app --bind [::]:8080
+
+Dans CDEgest, « Échanges avec l'État » → mode Réel : adresse, environnement (recette | production), délai,
+correspondance des champs (JSON). Secrets : `CONN_API_KEY` (ou `CONN_API_KEY_<CODE>`), `CONN_CERT_<CODE>`,
+`CONN_KEY_<CODE>`, `CONN_CA_<CODE>`. `CONN_BASE_URL` renseigne l'adresse par défaut (commande `connectors-env`).
+NIN de test : fin 0000 inconnu, 9999 indisponible, 8888 trop lent, 7777 erreur passagère.
+En recette, les données sont marquées « recette » et ne comptent pas comme vérifiées (I18).

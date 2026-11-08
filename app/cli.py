@@ -201,6 +201,14 @@ def register_cli(app):
         db.session.commit()
         click.echo("reset-demo: base recréée")
 
+    @app.cli.command("connectors-env")
+    def connectors_env_cmd():
+        """Adresse par défaut des connecteurs entrants depuis CONN_BASE_URL / CONN_URL_<CODE> (si vide)."""
+        from .services import real
+        n = real.configure_from_env()
+        db.session.commit()
+        click.echo(f"connectors-env: {n} adresse(s) renseignée(s)")
+
     @app.cli.command("sync-passwords")
     def sync_passwords_cmd():
         """Re-apply the PASSWORD_* environment variables to existing accounts."""

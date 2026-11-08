@@ -1,5 +1,6 @@
 """Échanges avec les administrations (EP-12) et boîte d'envoi des messages simulés (EP-11)."""
 import hmac
+import json
 import time
 from datetime import date, timedelta
 
@@ -13,7 +14,9 @@ from ..models import ApiCall, AuditLog, Candidature, Enrollment, Notification, P
 from ..security import ADMIN, COORD, DFEP, MFEP, RESP, roles_required, visible_institute_ids
 from ..services import connectors as C
 from ..services import notify as N
+from ..services import real as R
 from ..services.messages import CATALOG, CATEGORY_LABEL
+from ..utils import utcnow
 
 bp = Blueprint("integration", __name__)
 
@@ -31,11 +34,57 @@ def connectors():
             if code not in C.CONNECTORS or mode not in C.MODES:
                 abort(400)
             old = C.mode(code)
+            if mode == "reel" and code in R.INBOUND and not R.connector(code).url:
+                flash(t("conn.need_url"), "err")
+                return redirect(url_for(".connectors"))
             C.set_mode(code, mode, current_user)
             AuditLog.log("connector.mode", target=code, details=f"{old} → {mode}")
             db.session.commit()
             flash(t("conn.mode_saved"), "ok")
             return redirect(url_for(".connectors"))
+        if act in ("config", "health", "reset_map", "rearm"):
+            code = request.form.get("code")
+            if code not in R.INBOUND:
+                abort(400)
+            c = R.connector(code)
+            if act == "config":
+                url = (request.form.get("url") or "").strip()
+                if url and not url.startswith(("https://", "http://")):
+                    flash(t("conn.bad_url"), "err")
+                    return redirect(url_for(".connectors", cfg=code))
+                env = request.form.get("environment")
+                if env not in R.ENVIRONMENTS:
+                    abort(400)
+                if env == "production" and c.environment != "production" and not request.form.get("convention"):
+                    flash(t("conn.need_convention"), "err")
+                    return redirect(url_for(".connectors", cfg=code))
+                text = (request.form.get("mapping") or "").strip()
+                if text and text != json.dumps(R.DEFAULT_MAPPING[code], ensure_ascii=False, indent=1):
+                    m, err = R.validate_mapping(code, text)
+                    if err:
+                        flash(t("conn.bad_map", err=err), "err")
+                        return redirect(url_for(".connectors", cfg=code))
+                    c.mapping = json.dumps(m, ensure_ascii=False)
+                details = f"adresse={url or '—'} · environnement={env} · délai={request.form.get('timeout', type=int) or 5} s"
+                c.url, c.environment = url or None, env
+                c.timeout_s = max(1, min(30, request.form.get("timeout", type=int) or 5))
+                c.updated_by_id, c.updated_at = current_user.id, utcnow()
+                AuditLog.log("connector.config", target=code, details=details + (" · correspondance modifiée" if c.mapping else ""))
+                flash(t("conn.cfg_saved"), "ok")
+            elif act == "health":
+                ok, msg = R.health(code)
+                AuditLog.log("connector.health", target=code, details=msg)
+                flash(t("conn.health_ok" if ok else "conn.health_ko", msg=msg), "ok" if ok else "err")
+            elif act == "reset_map":
+                c.mapping = None
+                AuditLog.log("connector.config", target=code, details="correspondance par défaut")
+                flash(t("conn.map_reset"), "ok")
+            else:
+                R.rearm(code)
+                AuditLog.log("connector.rearm", target=code)
+                flash(t("conn.rearmed"), "ok")
+            db.session.commit()
+            return redirect(url_for(".connectors", cfg=code))
         if act == "test":
             raw = request.form.get("nin")
             test = {"nin": NIN.mask(raw), "etat_civil": C.identity(raw), "mfep_diplomes": C.diplomas(raw), "men": C.level(raw)}
@@ -55,8 +104,11 @@ def connectors():
     modes = {code: C.mode(code) for code in C.CONNECTORS}
     unverified = Candidature.query.filter(Candidature.status.in_(("nouvelle", "retenue")),
                                           Candidature.identity_source != "etat_civil").count()
+    real = {code: R.status_line(code) for code in R.INBOUND}
+    maps = {code: json.dumps(R.mapping(code), ensure_ascii=False, indent=1) for code in R.INBOUND}
     return render_template("integration/connectors.html", conns=C.CONNECTORS, modes=modes, MODES=C.MODES, stats=stats,
-                           calls=calls, test=test, unverified=unverified,
+                           calls=calls, test=test, unverified=unverified, real=real, maps=maps, INBOUND=R.INBOUND,
+                           open_cfg=request.args.get("cfg"),
                            keys={"nesda": bool(current_app.config.get("NESDA_API_KEY")),
                                  "mfep": bool(current_app.config.get("MFEP_API_KEY"))})
 
