@@ -187,6 +187,7 @@ def register_cli(app):
         if if_version and cur is not None and cur.value == if_version:
             click.echo(f"reset-demo: version {if_version} déjà en place")
             return
+        db.session.expunge_all()            # oublie les objets lus avant la suppression (ex. version de démo)
         db.drop_all()
         db.session.execute(db.text("DROP TABLE IF EXISTS alembic_version"))
         db.session.commit()
@@ -208,6 +209,12 @@ def register_cli(app):
         n = real.configure_from_env()
         db.session.commit()
         click.echo(f"connectors-env: {n} adresse(s) renseignée(s)")
+        from .services import connectors as C
+        for code in real.INBOUND:
+            c = real.connector(code)
+            if c.url:
+                ok, msg = real.health(code)
+                click.echo(f"connectors-env: {code} [{C.mode(code)}, {c.environment}] → {'raccordé' if ok else 'ÉCHEC'} ({msg})")
 
     @app.cli.command("sync-passwords")
     def sync_passwords_cmd():
