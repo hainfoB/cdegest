@@ -156,6 +156,11 @@ def men(nin):
 
 # ------------------------------------------------------------------ santé et pilotage de la recette
 
+@app.get("/health")
+def health():
+    return "ok"
+
+
 @app.get("/api/sante")
 def sante():
     return jsonify({"statut": "ok", "services": {s: ("panne" if STATE["panne"][s] else "ok") for s in SERVICES},
