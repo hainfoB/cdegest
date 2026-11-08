@@ -21,14 +21,14 @@ if errorlevel 1 goto oldpython
 
 rem ---- 2. Environnement et bibliotheques (une seule fois)
 if exist ".venv\Scripts\python.exe" goto venvok
-echo  [1/4] Creation de l'environnement Python...
+echo  [1/5] Creation de l'environnement Python...
 %PY% -m venv .venv
 if errorlevel 1 goto failed
 :venvok
 set "VPY=.venv\Scripts\python.exe"
-"%VPY%" -c "import flask, flask_sqlalchemy, flask_migrate, flask_login, flask_wtf, segno, openpyxl, dotenv" >nul 2>nul
+"%VPY%" -c "import flask, flask_sqlalchemy, flask_migrate, flask_login, flask_wtf, segno, openpyxl, dotenv, cryptography, requests" >nul 2>nul
 if not errorlevel 1 goto libsok
-echo  [2/4] Installation des bibliotheques...
+echo  [2/5] Installation des bibliotheques...
 if not exist "wheels" goto online
 "%VPY%" -m pip install -q --no-index --find-links wheels -r requirements-local.txt
 if not errorlevel 1 goto libsok
@@ -38,23 +38,31 @@ echo        (installation hors ligne impossible, tentative par Internet)
 if errorlevel 1 goto failed
 :libsok
 
-rem ---- 3. Base de donnees
+rem ---- 3. Acces, simulateur d'administrations et base de donnees
 if /i "%MODE%"=="reset" (
   echo  Reinitialisation de la demonstration...
   if exist "instance\cdegest.db" del /q "instance\cdegest.db"
 )
-if not exist ".env" "%VPY%" -m flask --app wsgi init-local
-echo  [3/4] Preparation de la base (premiere fois : environ 1 minute)...
+rem .env : cree la premiere fois, complete lors d'une mise a jour (les mots de passe existants sont gardes)
+"%VPY%" -m flask --app wsgi init-local --sim-url http://127.0.0.1:5099
+if errorlevel 1 goto failed
+echo  [3/5] Demarrage du simulateur d'administrations (fenetre reduite)...
+start "CDEgest - simulateur d'administrations" /min "%VPY%" -m flask --app simulateur.app run --port 5099
+echo  [4/5] Preparation de la base (premiere fois : environ 1 minute)...
 "%VPY%" -m flask --app wsgi db upgrade >nul 2>nul
 if errorlevel 1 goto failed
-"%VPY%" -m flask --app wsgi seed-base
-"%VPY%" -m flask --app wsgi seed-demo
+"%VPY%" -m flask --app wsgi reset-demo --if-version 1.3.1
+if errorlevel 1 goto failed
+"%VPY%" -m flask --app wsgi seed-base >nul
+"%VPY%" -m flask --app wsgi seed-demo >nul
 "%VPY%" -m flask --app wsgi sync-passwords >nul
+"%VPY%" -m flask --app wsgi connectors-env
 
 rem ---- 4. Serveur
 echo.
-echo  [4/4] CDEgest est pret : http://localhost:5000
-echo        Acces : fichier ACCES_DEMO.txt (ou ACCES_LOCAL.txt)
+echo  [5/5] CDEgest v1.3 est pret : http://localhost:5000
+echo        Acces (NIN et mots de passe) : fichier ACCES_LOCAL.txt
+echo        Echanges avec l'Etat : mode reel, vers le simulateur (fenetre reduite, a laisser ouverte)
 if /i "%MODE%"=="reseau" (
   echo.
   echo        Depuis un telephone sur le meme Wi-Fi, ouvrez :
@@ -63,7 +71,7 @@ if /i "%MODE%"=="reseau" (
 )
 echo.
 echo        Laissez cette fenetre ouverte pendant la demonstration.
-echo        Fermez-la pour arreter le serveur.
+echo        Fermez-la (et celle du simulateur) pour arreter CDEgest.
 echo.
 start "" http://localhost:5000/login
 if /i "%MODE%"=="reseau" (

@@ -120,27 +120,53 @@ def register_cli(app):
         click.echo(seed_site())
 
     @app.cli.command("init-local")
-    def init_local_cmd():
-        """Create .env with a secret key and one private password per account (local use)."""
+    @click.option("--url", default="http://localhost:5000", help="Adresse de l'application (serveur : https://…).")
+    @click.option("--sim-url", default="http://127.0.0.1:5099", help="Adresse du simulateur d'administrations (vide = aucun).")
+    def init_local_cmd(url, sim_url):
+        """Crée ou complète .env (clés, un mot de passe privé par compte, simulateur) et écrit ACCES_LOCAL.txt.
+
+        Un .env existant est conservé : seules les valeurs manquantes sont ajoutées (mise à jour d'une ancienne version).
+        """
         from pathlib import Path
-        env = Path(app.root_path).parent / ".env"
+        root = Path(app.root_path).parent
+        env = root / ".env"
+        cur = {}
         if env.exists():
-            click.echo(".env existe déjà : rien à faire")
-            return
+            for line in env.read_text(encoding="utf-8").splitlines():
+                if "=" in line and not line.lstrip().startswith("#"):
+                    k, _, v = line.partition("=")
+                    cur[k.strip()] = v.strip()
         words = ["Atlas", "Sahara", "Tassili", "Hoggar", "Djurdjura", "Babor", "Aures", "Medjerda"]
-        lines = ["FLASK_APP=wsgi", "DEMO_MODE=1", "SHOW_DEMO_ACCOUNTS=0", f"SECRET_KEY={secrets.token_hex(32)}"]
-        table = []
+        sim_key = cur.get("SIM_API_KEY") or secrets.token_urlsafe(18)
+        wanted = {"FLASK_APP": "wsgi", "DEMO_MODE": "1", "SHOW_DEMO_ACCOUNTS": "0", "SHOW_SIMULATED_MESSAGES": "1",
+                  "TZ": "Africa/Algiers", "APP_URL": url, "SECRET_KEY": secrets.token_hex(32), "NIN_KEY": secrets.token_hex(32)}
+        if sim_url:
+            wanted.update({"CONN_BASE_URL": sim_url, "CONN_API_KEY": sim_key, "SIM_API_KEY": sim_key})
         for spec in DEMO_USERS:
-            if "pwd_env" not in spec:
-                continue
-            pwd = f"{secrets.choice(words)}-{secrets.randbelow(9000) + 1000}-{secrets.token_urlsafe(4)}"
-            lines.append(f"{spec['pwd_env']}={pwd}")
-            table.append(f"{spec['name']:<34} NIN {spec['nin']:<20} {pwd}")
-        env.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        acces = Path(app.root_path).parent / "ACCES_LOCAL.txt"
-        acces.write_text("CDEgest — accès locaux (fichier privé, ne pas partager)\nhttp://localhost:5000/login\n\n" + "\n".join(table) + "\n", encoding="utf-8")
-        click.echo("Accès créés et enregistrés dans ACCES_LOCAL.txt :")
-        click.echo("\n".join(table))
+            if "pwd_env" in spec:
+                wanted[spec["pwd_env"]] = f"{secrets.choice(words)}-{secrets.randbelow(9000) + 1000}-{secrets.token_urlsafe(4)}"
+        added = [k for k in wanted if k not in cur]
+        if added:
+            with env.open("a", encoding="utf-8") as f:
+                if cur:
+                    f.write("\n# ajouté par init-local (mise à jour)\n")
+                for k in added:
+                    f.write(f"{k}={wanted[k]}\n")
+                    cur[k] = wanted[k]
+        table = [f"  {spec['name']:<34} NIN {spec['nin']:<20} {cur[spec['pwd_env']]}"
+                 for spec in DEMO_USERS if "pwd_env" in spec]
+        text = ["CDEgest v1.3 — accès (fichier privé, ne pas partager). Données fictives.", "",
+                f"Adresse : {cur.get('APP_URL', url)}/login", "",
+                "Connexion : NIN (18 chiffres) + mot de passe, puis code à 6 chiffres. En démonstration, aucun message",
+                "n'est envoyé : le message simulé (avec le code) s'affiche sous le champ « Code reçu ».", "", "COMPTES"] + table
+        if cur.get("CONN_BASE_URL"):
+            text += ["", "ÉCHANGES AVEC L'ÉTAT : mode réel en recette, vers le simulateur d'administrations",
+                     f"  ({cur['CONN_BASE_URL']}). Menu « Échanges avec l'État » (administrateur ou MFEP).",
+                     "  NIN de test (fin du numéro) : 0000 inconnu · 9999 indisponible · 8888 trop lent · 7777 erreur passagère",
+                     "  (réussit au 2e essai) · autre : identité fictive trouvée (ex. 177700000000000555)."]
+        (root / "ACCES_LOCAL.txt").write_text("\n".join(text) + "\n", encoding="utf-8")
+        click.echo(f"init-local: .env {'complété' if added and len(added) < len(wanted) else 'créé' if added else 'déjà complet'}"
+                   f" ({len(added)} valeur(s) ajoutée(s)) ; accès dans ACCES_LOCAL.txt")
 
     @app.cli.command("set-password")
     @click.argument("nin")
@@ -153,6 +179,28 @@ def register_cli(app):
         u.set_password(password)
         db.session.commit()
         click.echo("mot de passe modifié")
+
+    @app.cli.command("backup")
+    @click.option("--dest", default=None, help="Dossier des sauvegardes (défaut : ../sauvegardes-cdegest).")
+    @click.option("--keep", default=14, help="Nombre de sauvegardes conservées.")
+    def backup_cmd(dest, keep):
+        """Sauvegarde à chaud de la base SQLite (à programmer chaque nuit). PostgreSQL : utiliser pg_dump ou l'hébergeur."""
+        import sqlite3
+        from datetime import datetime
+        from pathlib import Path
+        uri = app.config["SQLALCHEMY_DATABASE_URI"]
+        if not uri.startswith("sqlite:///"):
+            raise click.ClickException("base non SQLite : utilisez pg_dump ou la sauvegarde de l'hébergeur")
+        src = db.engine.url.database
+        folder = Path(dest or Path(app.root_path).parent.parent / "sauvegardes-cdegest")
+        folder.mkdir(parents=True, exist_ok=True)
+        out = folder / f"cdegest-{datetime.now():%Y%m%d-%H%M}.db"
+        with sqlite3.connect(src) as a, sqlite3.connect(out) as b:
+            a.backup(b)
+        olds = sorted(folder.glob("cdegest-*.db"))[:-keep]
+        for o in olds:
+            o.unlink()
+        click.echo(f"backup: {out} ({out.stat().st_size // 1024} Ko), {len(olds)} ancienne(s) supprimée(s)")
 
     @app.cli.command("notify-run")
     def notify_run_cmd():

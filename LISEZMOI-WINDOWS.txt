@@ -1,0 +1,26 @@
+CDEgest v1.3 — test sur un PC Windows
+=====================================
+
+1. Installer Python 3.12 (une seule fois) : https://www.python.org/downloads/
+   Pendant l'installation, cocher « Add python.exe to PATH ».
+2. Décompresser ce dossier (par exemple dans Documents\CDEgest). Ne pas le lancer depuis le .zip.
+3. Double-cliquer sur demarrer-windows.bat.
+   - La première fois : 2 à 3 minutes (installation sans Internet grâce au dossier « wheels », puis données de démonstration).
+   - Une petite fenêtre réduite « simulateur d'administrations » s'ouvre aussi : la laisser ouverte.
+   - Le navigateur s'ouvre sur http://localhost:5000/login
+4. Accès : fichier ACCES_LOCAL.txt (NIN, mots de passe, NIN de test). Fichier privé.
+
+Autres lanceurs
+- demarrer-reseau-windows.bat : même chose, accessible depuis un téléphone sur le même Wi-Fi
+  (accepter la demande du pare-feu Windows pour les réseaux privés).
+- reinitialiser-demo-windows.bat : remet les données de démonstration à zéro (mots de passe inchangés).
+
+Arrêter : fermer la fenêtre CDEgest et la fenêtre du simulateur.
+Mise à jour d'une ancienne version : copier les nouveaux fichiers par-dessus l'ancien dossier en gardant
+.env et instance\ ; au lancement, les accès sont complétés (mêmes mots de passe) et la démo est recréée.
+
+Échanges avec l'État (menu, compte administrateur ou MFEP) : mode « Réel » en « Recette », vers le simulateur
+local (http://127.0.0.1:5099). NIN de test : fin 0000 inconnu, 9999 indisponible, 8888 trop lent,
+7777 erreur passagère (réussit au 2e essai).
+
+Installation sur un serveur cPanel : voir le guide d'installation cPanel.

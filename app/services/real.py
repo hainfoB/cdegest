@@ -16,6 +16,9 @@ Secrets (variables d'environnement, jamais en base) :
   CONN_API_KEY_<CODE> ou CONN_API_KEY      → en-tête X-Api-Key
   CONN_CERT_<CODE>, CONN_KEY_<CODE>        → certificat client (mTLS), chemins de fichiers
   CONN_CA_<CODE>                           → autorité de certification du partenaire
+  CONN_CERT_PEM_<CODE>, CONN_KEY_PEM_<CODE>, CONN_CA_PEM_<CODE>
+                                           → les mêmes, collés en texte (hébergeurs sans dépôt de fichiers,
+                                             ex. cPanel, Railway) ; écrits dans instance/certs/ (droits 600)
 """
 import copy
 import json
@@ -115,11 +118,35 @@ def validate_mapping(code, text):
     return m, None
 
 
+def _pem_file(code, kind):
+    """Certificat fourni en texte (CONN_<KIND>_PEM_<CODE>) : écrit une fois dans instance/certs/, chemin renvoyé."""
+    text = os.environ.get(f"CONN_{kind}_PEM_{code.upper()}")
+    if not text:
+        return None
+    from flask import current_app
+    folder = os.path.join(current_app.instance_path, "certs")
+    os.makedirs(folder, mode=0o700, exist_ok=True)
+    path = os.path.join(folder, f"{code}.{kind.lower()}.pem")
+    body = text.replace("\\n", "\n").strip() + "\n"     # accepte les retours à la ligne écrits « \n »
+    try:
+        with open(path, encoding="utf-8") as f:
+            if f.read() == body:
+                return path
+    except OSError:
+        pass
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(body)
+    return path
+
+
 def secrets(code):
     up = code.upper()
     env = os.environ.get
     key = env(f"CONN_API_KEY_{up}") or env("CONN_API_KEY")
-    cert, pkey, ca = env(f"CONN_CERT_{up}"), env(f"CONN_KEY_{up}"), env(f"CONN_CA_{up}")
+    cert = env(f"CONN_CERT_{up}") or _pem_file(code, "CERT")
+    pkey = env(f"CONN_KEY_{up}") or _pem_file(code, "KEY")
+    ca = env(f"CONN_CA_{up}") or _pem_file(code, "CA")
     return {"key": key, "cert": (cert, pkey) if cert and pkey else (cert or None), "ca": ca or True}
 
 
