@@ -60,7 +60,8 @@
   {% if test and test.nin %}
   <div style="margin-top:12px">{% for k in ('etat_civil','mfep_diplomes','men') %}{% set r = test[k] %}
     <div class="mailbox" style="margin-bottom:8px"><div class="subj">{{ k }} — {{ t('ec.' ~ r[0]) }} <span class="srcv {{ r[2] }}">{{ t('src.' ~ r[2]) }}</span></div>
-      {% if r[1] %}<pre class="mono" style="white-space:pre-wrap;margin:0">{{ r[1]|tojson(indent=1) }}</pre>{% endif %}</div>{% endfor %}</div>
+      {%- if r[1] %}{% for item in (r[1] if r[1] is sequence and r[1] is not mapping and r[1] is not string else [r[1]]) -%}
+      <dl class="kv kvsm">{% for key, val in item.items() %}<dt class="mono">{{ key }}</dt><dd>{{ val }}</dd>{% endfor %}</dl>{%- endfor %}{% endif -%}</div>{% endfor %}</div>
   {% endif %}
 </form>
 <div class="panel">
